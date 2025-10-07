@@ -1,6 +1,8 @@
+// app/(dashboard)/layout.tsx
 import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
-import { FileText, History, BarChart3, Settings } from 'lucide-react';
+import { FileText, History, BarChart3 } from 'lucide-react';
+import Logo from '@/components/logo';
 
 export default function DashboardLayout({
   children,
@@ -13,13 +15,9 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">
-              <Link href="/" className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-xl font-bold">Budget Analyzer</span>
-              </Link>
-
+              {/* Reemplazar el logo */}
+              <Logo size="md" showText href="/" />
+              
               <nav className="hidden md:flex space-x-6">
                 <Link 
                   href="/analyze" 
@@ -44,7 +42,6 @@ export default function DashboardLayout({
                 </Link>
               </nav>
             </div>
-
             <div className="flex items-center space-x-4">
               <UserButton 
                 afterSignOutUrl="/"
@@ -58,7 +55,6 @@ export default function DashboardLayout({
           </div>
         </div>
       </header>
-
       <main className="container mx-auto px-4 py-8">
         {children}
       </main>
