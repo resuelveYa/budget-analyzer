@@ -57,14 +57,13 @@ export default function TextBudgetAnalyzer() {
     setValidationStatus('invalid');
     return false;
   };
+
   const formatChileanNumber = (value: number | string): string => {
     if (!value && value !== 0) return '';
-    
-    const numStr = value.toString().replace(/\./g, ''); // Remover puntos existentes
+    const numStr = value.toString().replace(/\./g, '');
     return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
-  // Función para parsear el número formateado a número puro
   const parseChileanNumber = (value: string): number => {
     const cleanValue = value.replace(/\./g, '');
     return parseFloat(cleanValue) || 0;
@@ -75,8 +74,6 @@ export default function TextBudgetAnalyzer() {
     setError(null);
     setTimeout(validateForm, 300);
   };
-
-
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,12 +88,9 @@ export default function TextBudgetAnalyzer() {
 
     try {
       console.log('🚀 Iniciando análisis con datos:', formData, config);
-      
       const response = await analyzeApi.analyzeProject(formData, config);
-      
       console.log('✅ Respuesta recibida:', response);
       setResult(response);
-      
     } catch (err: any) {
       console.error('❌ Error en análisis:', err);
       setError(err.response?.data?.message || err.message || 'Error al generar el análisis');
@@ -106,7 +100,6 @@ export default function TextBudgetAnalyzer() {
   };
 
   const handleViewFullAnalysis = () => {
-    // Guardar resultado en localStorage temporalmente
     if (result) {
       const analysisId = `analysis_${Date.now()}`;
       localStorage.setItem(analysisId, JSON.stringify(result));
@@ -122,30 +115,64 @@ export default function TextBudgetAnalyzer() {
     }).format(amount);
   };
 
+  // 🔥 FUNCIÓN ACTUALIZADA: Extrae presupuesto de la nueva estructura
   const extractBudget = (analysis: any) => {
-    if (analysis?.data?.analysis?.presupuesto_ajustado) {
-      const match = analysis.data.analysis.presupuesto_ajustado.match(/[\d.,]+/);
+    const data = analysis?.data?.analysis;
+    
+    // Prioridad 1: presupuesto_estimado.total_clp (nueva estructura)
+    if (data?.presupuesto_estimado?.total_clp) {
+      return data.presupuesto_estimado.total_clp;
+    }
+    
+    // Prioridad 2: desglose_costos.total (estructura alternativa)
+    if (data?.desglose_costos?.total) {
+      return data.desglose_costos.total;
+    }
+    
+    // Fallback: presupuesto_ajustado (estructura antigua)
+    if (data?.presupuesto_ajustado) {
+      const match = data.presupuesto_ajustado.match(/[\d.,]+/);
       return match ? parseFloat(match[0].replace(/\./g, '').replace(',', '.')) : 0;
     }
-    return 0;
+    
+    // Si nada funciona, retornar el presupuesto estimado del form
+    return formData.estimatedBudget || 0;
   };
 
+  // 🔥 FUNCIÓN ACTUALIZADA: Extrae desglose de porcentajes
   const extractBreakdown = (analysis: any) => {
-    const breakdown = analysis?.data?.analysis?.desglose_detallado;
-    if (breakdown) {
-      return Object.keys(breakdown).reduce((acc: any, key) => {
-        const value = breakdown[key];
-        if (value?.porcentaje) {
-          acc[key] = parseFloat(value.porcentaje);
-        }
-        return acc;
-      }, {});
+    const data = analysis?.data?.analysis;
+    
+    // Prioridad 1: presupuesto_estimado con porcentajes (nueva estructura)
+    if (data?.presupuesto_estimado) {
+      const budget = data.presupuesto_estimado;
+      return {
+        'Materiales': budget.materials_percentage || 0,
+        'Mano de Obra': budget.labor_percentage || 0,
+        'Equipos': budget.equipment_percentage || 0,
+        'Gastos Generales': budget.overhead_percentage || 0
+      };
     }
+    
+    // Prioridad 2: Calcular porcentajes desde desglose_costos
+    if (data?.desglose_costos) {
+      const breakdown = data.desglose_costos;
+      const total = breakdown.total || breakdown.subtotal || 1;
+      
+      return {
+        'Materiales': parseFloat(((breakdown.materiales || 0) / total * 100).toFixed(1)),
+        'Mano de Obra': parseFloat(((breakdown.mano_obra || 0) / total * 100).toFixed(1)),
+        'Equipos': parseFloat(((breakdown.equipos || 0) / total * 100).toFixed(1)),
+        'Gastos Generales': parseFloat(((breakdown.gastos_generales || 0) / total * 100).toFixed(1))
+      };
+    }
+    
+    // Fallback: Valores por defecto
     return {
-      materiales: 40,
-      mano_obra: 35,
-      equipos: 15,
-      otros: 10
+      'Materiales': 45,
+      'Mano de Obra': 35,
+      'Equipos': 12,
+      'Gastos Generales': 8
     };
   };
 
@@ -228,21 +255,21 @@ export default function TextBudgetAnalyzer() {
                         className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
                       />
                     </div>
-                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Presupuesto Est. (CLP)
-                    </label>
-                    <input
-                      type="text"  // Cambiar a text para permitir el formateo
-                      placeholder="75.000.000"
-                      value={formData.estimatedBudget ? formatChileanNumber(formData.estimatedBudget) : ''}
-                      onChange={(e) => {
-                        const rawValue = parseChileanNumber(e.target.value);
-                        handleInputChange('estimatedBudget', rawValue);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">
+                        Presupuesto Est. (CLP)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="75.000.000"
+                        value={formData.estimatedBudget ? formatChileanNumber(formData.estimatedBudget) : ''}
+                        onChange={(e) => {
+                          const rawValue = parseChileanNumber(e.target.value);
+                          handleInputChange('estimatedBudget', rawValue);
+                        }}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -368,8 +395,8 @@ export default function TextBudgetAnalyzer() {
                     <h4 className="text-white font-medium mb-3">Desglose</h4>
                     {Object.entries(extractBreakdown(result)).map(([key, value]: [string, any]) => (
                       <div key={key} className="flex justify-between text-white/90 text-sm">
-                        <span className="capitalize">{key.replace('_', ' ')}</span>
-                        <span className="font-semibold">{typeof value === 'number' ? value.toFixed(0) + '%' : value}</span>
+                        <span>{key}</span>
+                        <span className="font-semibold">{value}%</span>
                       </div>
                     ))}
                   </div>
