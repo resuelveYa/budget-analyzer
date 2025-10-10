@@ -57,12 +57,26 @@ export default function TextBudgetAnalyzer() {
     setValidationStatus('invalid');
     return false;
   };
+  const formatChileanNumber = (value: number | string): string => {
+    if (!value && value !== 0) return '';
+    
+    const numStr = value.toString().replace(/\./g, ''); // Remover puntos existentes
+    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  // Función para parsear el número formateado a número puro
+  const parseChileanNumber = (value: string): number => {
+    const cleanValue = value.replace(/\./g, '');
+    return parseFloat(cleanValue) || 0;
+  };
 
   const handleInputChange = (field: keyof ProjectData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setError(null);
     setTimeout(validateForm, 300);
   };
+
+
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,18 +228,21 @@ export default function TextBudgetAnalyzer() {
                         className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-2">
-                        Presupuesto Est. (CLP)
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="75000000"
-                        value={formData.estimatedBudget || ''}
-                        onChange={(e) => handleInputChange('estimatedBudget', parseFloat(e.target.value) || 0)}
-                        className="w-full px-4 py-3 bg-white/10 border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
-                    </div>
+                   <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Presupuesto Est. (CLP)
+                    </label>
+                    <input
+                      type="text"  // Cambiar a text para permitir el formateo
+                      placeholder="75.000.000"
+                      value={formData.estimatedBudget ? formatChileanNumber(formData.estimatedBudget) : ''}
+                      onChange={(e) => {
+                        const rawValue = parseChileanNumber(e.target.value);
+                        handleInputChange('estimatedBudget', rawValue);
+                      }}
+                      className="w-full px-4 py-3 bg-white/10 border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
                   </div>
 
                   <div>

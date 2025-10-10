@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/backend/:path*',
-        destination: `${process.env.BACKEND_API_URL}/:path*`,
+        destination: `${process.env.BACKEND_API_URL || 'https://api.resuelveya.cl/api'}/:path*`,
       },
     ];
   },
