@@ -1,5 +1,5 @@
-// lib/api/client.ts
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+// lib/api/client.ts - VERSIÓN OPTIMIZADA
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
 
 // ==========================================
 // TIPOS E INTERFACES
@@ -51,31 +51,6 @@ export interface HistoryResponse {
   timestamp: string;
 }
 
-export interface UsageStats {
-  user_id: string;
-  environment: string;
-  current_month: {
-    budget_analyses: number;
-    pdf_analyses: number;
-    comparisons: number;
-    total_cost_usd: number;
-    total_cost_clp: number;
-  };
-  limits: {
-    monthly_analyses: number;
-    pdf_analyses: number;
-    max_file_size_mb: number;
-    concurrent_analyses: number;
-    daily_cost_limit_usd: number;
-    global_daily_limit_usd: number;
-  };
-  usage_percentage: {
-    budget_analyses: number;
-    pdf_analyses: number;
-    daily_cost: number;
-  };
-}
-
 // ==========================================
 // CLIENTE API
 // ==========================================
@@ -90,11 +65,14 @@ class ApiClient {
         (process.env.NODE_ENV === 'development' 
           ? '/api/backend' 
           : 'https://api.resuelveya.cl/api'),
-      timeout: 120000,
+      timeout: 180000, // ✅ 3 minutos para análisis con IA
       headers: {
         'Content-Type': 'application/json',
       },
       withCredentials: true,
+      // ✅ Configuración adicional para requests largos
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
     });
 
     // Interceptor de request - agrega token automáticamente
@@ -110,7 +88,10 @@ class ApiClient {
         console.log('📤 Request:', config.method?.toUpperCase(), config.url);
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => {
+        console.error('❌ Error en request interceptor:', error);
+        return Promise.reject(error);
+      }
     );
 
     // Interceptor de response - maneja errores comunes
@@ -119,13 +100,30 @@ class ApiClient {
         console.log('✅ Response:', response.status, response.config.url);
         return response;
       },
-      (error) => {
-        console.error('❌ Error Response:', error.response?.status, error.config?.url);
+      (error: AxiosError) => {
+        console.error('❌ Error Response:', {
+          status: error.response?.status,
+          url: error.config?.url,
+          code: error.code,
+          message: error.message
+        });
+
+        // ✅ Manejo específico de timeouts
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+          console.error('⏱️ Timeout detectado - El análisis está tardando más de lo esperado');
+          return Promise.reject({
+            ...error,
+            message: 'El análisis está tardando más de lo esperado. Por favor, intenta nuevamente.'
+          });
+        }
+
+        // ✅ Manejo de errores 401
         if (error.response?.status === 401) {
           if (typeof window !== 'undefined') {
             window.location.href = '/sign-in';
           }
         }
+
         return Promise.reject(error);
       }
     );
@@ -170,6 +168,7 @@ class ApiClient {
 
   /**
    * Análisis rápido de proyecto (sin PDF)
+   * ✅ Con timeout extendido específico
    */
   async analyzeProject(projectData: ProjectData, config: AnalysisConfig) {
     console.log('📊 Enviando análisis rápido:', projectData);
@@ -178,19 +177,23 @@ class ApiClient {
       analysisDepth: config.analysisDepth,
       includeMarketRates: config.includeMarketData,
       includeProviders: config.includeProviders ?? true,
-      saveAnalysis: true // ✅ Asegurar que se guarde en BD
+      saveAnalysis: true
+    }, {
+      timeout: 180000, // 3 minutos para análisis con IA
     });
     return response.data;
   }
 
   /**
    * Análisis de PDF
+   * ✅ Con timeout extendido específico
    */
   async analyzePdf(formData: FormData) {
     const response = await this.client.post('/budget-analysis/pdf', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 300000, // 5 minutos para PDFs grandes
     });
     return response.data.data || response.data;
   }
@@ -212,15 +215,7 @@ class ApiClient {
       params: { limit, offset },
     });
     console.log('✅ Historial recibido:', response.data);
-    return response.data; // Devuelve todo el objeto con success, data, etc.
-  }
-
-  /**
-   * Obtener estadísticas de uso
-   */
-  async getUsageStats(): Promise<UsageStats> {
-    const response = await this.client.get('/budget-analysis/usage/stats');
-    return response.data.data;
+    return response.data;
   }
 
   /**
@@ -287,9 +282,6 @@ export const analyzeApi = {
   
   getHistory: (limit?: number, offset?: number) => 
     apiClient.getAnalysisHistory(limit, offset),
-  
-  getStats: () => 
-    apiClient.getUsageStats(),
   
   // Validaciones
   validateConfig: (config: any) => 

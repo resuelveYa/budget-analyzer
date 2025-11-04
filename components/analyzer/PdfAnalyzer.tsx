@@ -89,7 +89,7 @@ export default function PdfAnalyzer() {
 
       for (const stage of progressStages) {
         setProgress(stage as PdfAnalysisProgress);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await new Promise(resolve => setTimeout(resolve, 900));
       }
 
       const response = await analyzeApi.analyzePdf(formData);

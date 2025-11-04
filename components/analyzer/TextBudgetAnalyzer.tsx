@@ -1,3 +1,4 @@
+// components/analyzer/TextBudgetAnalyzer.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -10,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { analyzeApi } from '@/lib/api/client';
 import Logo from '../logo';
+import { UsageBadge } from '../usage/UsageBadge';
 
 interface ProjectData {
   type: 'residential' | 'commercial' | 'industrial' | 'infrastructure' | 'renovation';
@@ -189,6 +191,9 @@ export default function TextBudgetAnalyzer() {
           <p className="text-xl text-blue-100">
             Genera estimaciones precisas en minutos
           </p>
+          <div className="mt-4">
+            <UsageBadge metric="daily_analyses" />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

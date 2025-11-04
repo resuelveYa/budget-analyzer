@@ -1,3 +1,4 @@
+// app/layout.tsx
 import { ClerkProvider } from '@clerk/nextjs';
 import { esES } from '@clerk/localizations';
 import type { Metadata } from 'next';

@@ -3,6 +3,7 @@ import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { FileText, History, BarChart3 } from 'lucide-react';
 import Logo from '@/components/logo';
+import { UsageHeaderIndicator } from '@/components/usage/UsageHeaderIndicator'; // ← AGREGAR
 
 export default function DashboardLayout({
   children,
@@ -15,7 +16,6 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">
-              {/* Reemplazar el logo */}
               <Logo size="md" showText href="/" />
               
               <nav className="hidden md:flex space-x-6">
@@ -42,7 +42,11 @@ export default function DashboardLayout({
                 </Link>
               </nav>
             </div>
+            
+            {/* ← AGREGAR INDICADOR DE USO AQUÍ */}
             <div className="flex items-center space-x-4">
+              <UsageHeaderIndicator />
+              
               <UserButton 
                 afterSignOutUrl="/"
                 appearance={{
@@ -55,6 +59,7 @@ export default function DashboardLayout({
           </div>
         </div>
       </header>
+      
       <main className="container mx-auto px-4 py-8">
         {children}
       </main>
