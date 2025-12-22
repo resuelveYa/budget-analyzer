@@ -1,48 +1,201 @@
+// app/(dashboard)/analysis/[id]/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import FullAnalysisView from '@/components/analyzer/FullAnalysisView';
+import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
+import type { AnalysisHistoryItem } from '@/types/budgetAnalysis';
 
 export default function AnalysisDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const id = params.id as string;
-    
-    // Cargar desde localStorage
-    const stored = localStorage.getItem(id);
-    if (stored) {
-      try {
-        const data = JSON.parse(stored);
-        setAnalysisData(data);
-      } catch (error) {
-        console.error('Error parsing analysis data:', error);
-        router.push('/analyze');
+    loadAnalysisData(id);
+  }, [params.id]);
+
+  const loadAnalysisData = async (id: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log('🔍 Buscando análisis con ID:', id);
+
+      // ESTRATEGIA 1: localStorage (más rápido y confiable)
+      const stored = localStorage.getItem(id);
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          console.log('✅ Análisis encontrado en localStorage:', data);
+          
+          // Verificar que tenga la estructura correcta
+          if (data.data?.analysis || data.analysis) {
+            setAnalysisData(data);
+            setIsLoading(false);
+            return;
+          }
+        } catch (parseError) {
+          console.warn('⚠️ Error parseando localStorage, continuando con backend...');
+        }
       }
-    } else {
-      router.push('/analyze');
+
+      // ESTRATEGIA 2: Buscar en historial del backend
+      console.log('🔍 No encontrado en localStorage, buscando en backend...');
+      const response = await budgetAnalyzerApi.getHistory(100);
+      
+      if (response?.success && response.data?.analyses) {
+        console.log('📋 Total de análisis en backend:', response.data.analyses.length);
+        
+        // Buscar el análisis
+        const found = response.data.analyses.find(
+          (a: AnalysisHistoryItem) => 
+            String(a.analysis_id) === String(id) || 
+            String(a.id) === String(id)
+        );
+        
+        if (found) {
+          console.log('✅ Análisis encontrado en backend:', found);
+          
+          // Si el análisis tiene toda la data en details, úsala
+          if (found.details && Object.keys(found.details).length > 0) {
+            const formattedData = {
+              data: {
+                analysis: {
+                  resumen_ejecutivo: found.summary || found.details.resumen_ejecutivo || 'No disponible',
+                  presupuesto_estimado: found.details.presupuesto_estimado || {
+                    total_clp: found.estimated_budget || 0
+                  },
+                  desglose_costos: found.details.desglose_costos || null,
+                  confidence_score: found.confidence_score || 0,
+                  analisis_riesgos: found.details.analisis_riesgos || [],
+                  recomendaciones: found.details.recomendaciones || [],
+                  factores_regionales: found.details.factores_regionales || {},
+                  materiales_detallados: found.details.materiales_detallados || [],
+                  mano_obra: found.details.mano_obra || [],
+                  equipos_maquinaria: found.details.equipos_maquinaria || [],
+                  proveedores_chile: found.details.proveedores_chile || [],
+                  cronograma_estimado: found.details.cronograma_estimado || '',
+                  contingencia_recomendada: found.details.contingencia_recomendada || '20%',
+                  ...found.details
+                },
+                project_info: {
+                  location: found.location || 'No especificada',
+                  project_type: found.project_type || 'No especificado',
+                  file_name: found.file_name || 'Sin nombre',
+                  estimated_budget: found.estimated_budget || 0,
+                  area_m2: found.area_m2,
+                  type: found.project_type
+                },
+                analysis_id: found.analysis_id
+              }
+            };
+            
+            setAnalysisData(formattedData);
+            
+            // Guardar en localStorage para futuros accesos
+            localStorage.setItem(id, JSON.stringify(formattedData));
+          } else {
+            // Si no tiene details completo, crear estructura básica
+            const formattedData = {
+              data: {
+                analysis: {
+                  resumen_ejecutivo: found.summary || 'Este análisis no tiene información detallada disponible.',
+                  presupuesto_estimado: {
+                    total_clp: found.estimated_budget || 0
+                  },
+                  confidence_score: found.confidence_score || 0
+                },
+                project_info: {
+                  location: found.location || 'No especificada',
+                  project_type: found.project_type || 'No especificado',
+                  file_name: found.file_name || 'Sin nombre',
+                  estimated_budget: found.estimated_budget || 0,
+                  area_m2: found.area_m2
+                },
+                analysis_id: found.analysis_id
+              }
+            };
+            
+            setAnalysisData(formattedData);
+            localStorage.setItem(id, JSON.stringify(formattedData));
+          }
+        } else {
+          console.error('❌ Análisis no encontrado. IDs disponibles:', 
+            response.data.analyses.map((a: AnalysisHistoryItem) => ({
+              id: a.id,
+              analysis_id: a.analysis_id
+            }))
+          );
+          setError('Análisis no encontrado en el historial');
+        }
+      } else {
+        setError('Error cargando análisis del servidor');
+      }
+      
+    } catch (err: any) {
+      console.error('❌ Error cargando análisis:', err);
+      setError(err.message || 'Error cargando el análisis');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
-  }, [params.id, router]);
+  };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="space-y-6">
+        <Button variant="ghost" asChild>
+          <Link href="/history">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Link>
+        </Button>
+
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-primary" />
+            <p className="text-muted-foreground">Cargando análisis...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!analysisData) {
+  if (error || !analysisData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Análisis no encontrado</p>
+      <div className="space-y-6">
+        <Button variant="ghost" asChild>
+          <Link href="/history">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Link>
+        </Button>
+
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center max-w-md">
+            <div className="text-red-500 mb-4 text-5xl">⚠️</div>
+            <h2 className="text-2xl font-bold mb-2">
+              {error || 'Análisis no encontrado'}
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              No se pudo cargar la información del análisis solicitado.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" asChild>
+                <Link href="/history">Ver historial</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/analyze">Nuevo análisis</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

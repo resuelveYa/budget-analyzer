@@ -1,82 +1,19 @@
 // lib/budgetAnalyzerApi.ts
 import { apiClient } from './client';
+import usageApi from './usageApi';
+
+// ✅ IMPORTS SIMPLES - Sin re-exports
+import type { ProjectData } from '@/types/budgetAnalysis';
+import type { AnalysisConfig } from '@/types/budgetAnalysis';
+import type { AnalysisHistoryItem } from '@/types/budgetAnalysis';
+import type { HistoryResponse } from '@/types/budgetAnalysis';
+import type { PdfAnalysisConfig } from '@/types/budgetAnalysis';
+import type { PdfAnalysisResult } from '@/types/budgetAnalysis';
 
 /**
  * API específica para Budget Analyzer
- * Maneja todos los endpoints relacionados con análisis de presupuestos
+ * ✅ ÚNICA FUENTE DE VERDAD para análisis de presupuestos
  */
-
-export interface ProjectData {
-  type: string;
-  location: string;
-  area: number;
-  estimatedBudget?: number;
-  description?: string;
-  name?: string;
-  startDate?: string;
-  client?: string;
-}
-
-export interface AnalysisConfig {
-  analysisDepth: 'basic' | 'standard' | 'detailed';
-  includeMarketData: boolean;
-  includeProviders?: boolean;
-}
-
-export interface AnalysisHistoryItem {
-  id: number;
-  analysis_id: string;
-  created_at: string;
-  analysis_type: 'quick' | 'pdf' | 'project';
-  project_type?: string;
-  location?: string;
-  area_m2?: number;
-  estimated_budget?: number;
-  confidence_score?: number;
-  summary?: string;
-  file_name?: string;
-}
-
-export interface HistoryResponse {
-  success: boolean;
-  message: string;
-  data: {
-    analyses: AnalysisHistoryItem[];
-    total: number;
-    pagination: {
-      limit: number;
-      offset: number;
-      has_more: boolean;
-    };
-  };
-  timestamp: string;
-}
-
-export interface UsageStats {
-  user_id: string;
-  environment: string;
-  current_month: {
-    budget_analyses: number;
-    pdf_analyses: number;
-    comparisons: number;
-    total_cost_usd: number;
-    total_cost_clp: number;
-  };
-  limits: {
-    monthly_analyses: number;
-    pdf_analyses: number;
-    max_file_size_mb: number;
-    concurrent_analyses: number;
-    daily_cost_limit_usd: number;
-    global_daily_limit_usd: number;
-  };
-  usage_percentage: {
-    budget_analyses: number;
-    pdf_analyses: number;
-    daily_cost: number;
-  };
-}
-
 class BudgetAnalyzerApi {
   /**
    * Análisis rápido de proyecto (sin PDF)
@@ -87,8 +24,10 @@ class BudgetAnalyzerApi {
       ...projectData,
       analysisDepth: config.analysisDepth,
       includeMarketRates: config.includeMarketData,
-      includeProviders: config.includeProviders ?? true,
-      saveAnalysis: true // ✅ Asegurar que se guarde en BD
+      includeProviders: config.includeProviders ?? true, // ✅ Ahora funciona
+      saveAnalysis: true
+    }, {
+      timeout: 180000, // 3 minutos
     });
     return response.data;
   }
@@ -96,32 +35,39 @@ class BudgetAnalyzerApi {
   /**
    * Análisis de PDF
    */
-  async analyzePdf(file: File, options?: {
-    analysisDepth?: string;
-    projectType?: string;
-    projectLocation?: string;
-    includeProviders?: boolean;
-  }) {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    if (options?.analysisDepth) {
-      formData.append('analysisDepth', options.analysisDepth);
-    }
-    if (options?.projectType) {
-      formData.append('projectType', options.projectType);
-    }
-    if (options?.projectLocation) {
-      formData.append('projectLocation', options.projectLocation);
-    }
-    if (options?.includeProviders !== undefined) {
-      formData.append('includeProviders', String(options.includeProviders));
+  async analyzePdf(
+    fileOrFormData: File | FormData, 
+    options?: PdfAnalysisConfig
+  ): Promise<any> {
+    let formData: FormData;
+
+    // Si ya es FormData, usarlo directamente
+    if (fileOrFormData instanceof FormData) {
+      formData = fileOrFormData;
+    } else {
+      // Si es File, crear FormData
+      formData = new FormData();
+      formData.append('file', fileOrFormData);
+      
+      if (options?.analysisDepth) {
+        formData.append('analysisDepth', options.analysisDepth);
+      }
+      if (options?.projectType) {
+        formData.append('projectType', options.projectType);
+      }
+      if (options?.projectLocation) {
+        formData.append('projectLocation', options.projectLocation);
+      }
+      if (options?.includeProviders !== undefined) {
+        formData.append('includeProviders', String(options.includeProviders));
+      }
     }
 
     const response = await apiClient.post('/budget-analysis/pdf', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 300000, // 5 minutos para PDFs
     });
     
     return response.data.data || response.data;
@@ -137,9 +83,9 @@ class BudgetAnalyzerApi {
 
   /**
    * Obtener historial de análisis del usuario
+   * ✅ MÉTODO PRINCIPAL para history page
    */
   async getHistory(limit: number = 20, offset: number = 0): Promise<HistoryResponse> {
-    console.log('📚 Solicitando historial, limit:', limit, 'offset:', offset);
     const response = await apiClient.get('/budget-analysis/history', {
       params: { limit, offset },
     });
@@ -149,10 +95,11 @@ class BudgetAnalyzerApi {
 
   /**
    * Obtener estadísticas de uso
+   * @deprecated Usar usageApi.getBudgetAnalyzerStats()
    */
-  async getUsageStats(): Promise<UsageStats> {
-    const response = await apiClient.get('/budget-analysis/usage/stats');
-    return response.data.data;
+  async getUsageStats() {
+    console.warn('⚠️ budgetAnalyzerApi.getUsageStats() está deprecado. Usar usageApi.getBudgetAnalyzerStats()');
+    return usageApi.getBudgetAnalyzerStats();
   }
 
   /**
@@ -198,8 +145,8 @@ class BudgetAnalyzerApi {
   }
 }
 
-// Exportar instancia única
+// ✅ Exportar instancia única
 export const budgetAnalyzerApi = new BudgetAnalyzerApi();
 
-// Export por defecto para imports más limpios
+// ✅ Export por defecto
 export default budgetAnalyzerApi;

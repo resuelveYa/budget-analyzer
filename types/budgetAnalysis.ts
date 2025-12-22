@@ -1,4 +1,4 @@
-// src/types/budgetAnalysis.ts - VERSIÓN CORREGIDA COMPATIBLE CON BACKEND OPTIMIZADO
+// src/types/budgetAnalysis.ts
 
 export interface ProjectData {
   id?: string;
@@ -20,6 +20,7 @@ export interface AnalysisConfig {
   analysisDepth?: 'basic' | 'standard' | 'detailed';
   includeMarketData?: boolean;
   includeHistoricalData?: boolean;
+  includeProviders?: boolean;
   saveAnalysis?: boolean;
 }
 
@@ -100,6 +101,36 @@ export interface AnalysisResponse {
   timestamp: string;
 }
 
+export interface AnalysisHistoryItem {
+  id: number;
+  analysis_id: string;
+  created_at: string;
+  analysis_type: 'quick' | 'pdf' | 'project';
+  project_type?: string;
+  location?: string;
+  area_m2?: number;
+  estimated_budget?: number;
+  confidence_score?: number;
+  summary?: string;
+  file_name?: string;
+  details?: any;
+}
+
+export interface HistoryResponse {
+  success: boolean;
+  message: string;
+  data: {
+    analyses: AnalysisHistoryItem[];
+    total: number;
+    pagination: {
+      limit: number;
+      offset: number;
+      has_more: boolean;
+    };
+  };
+  timestamp: string;
+}
+
 export interface ValidationResponse {
   success: boolean;
   message: string;
@@ -113,13 +144,7 @@ export interface ValidationResponse {
   timestamp: string;
 }
 
-export interface AnalysisHistoryItem {
-  id: string;
-  created_at: string;
-  confidence_score: number;
-  estimated_budget: number;
-  summary: string;
-}
+
 
 export interface HealthCheckResponse {
   success: boolean;

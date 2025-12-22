@@ -20,7 +20,7 @@ export default function DashboardLayout({
               
               <nav className="hidden md:flex space-x-6">
                 <Link 
-                  href="/analyze" 
+                  href="/analyze"
                   className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition"
                 >
                   <FileText className="w-4 h-4" />

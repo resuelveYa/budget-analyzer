@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { FileText, Loader2 } from 'lucide-react';
-import { analyzeApi } from '@/lib/api/client';
+import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
 
 interface AnalysisItem {
   id: number;
@@ -34,8 +34,7 @@ export default function HistoryPage() {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 Cargando historial...');
-      const response = await analyzeApi.getHistory(20);
+      const response = await budgetAnalyzerApi.getHistory(20);
       
       console.log('📦 Respuesta recibida:', response);
       

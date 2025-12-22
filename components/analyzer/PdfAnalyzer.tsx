@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { analyzeApi } from '@/lib/api/client';
+import { apiClient } from '@/lib/api/client';
+import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
 
 interface PdfAnalysisProgress {
   stage: 'uploading' | 'extracting' | 'analyzing' | 'complete';
@@ -35,7 +36,7 @@ export default function PdfAnalyzer() {
 
   // Configurar token getter en el API client
   useEffect(() => {
-    analyzeApi.setTokenGetter(getToken);
+    apiClient.setTokenGetter(getToken);
   }, [getToken]);
 
   const handleFileSelect = useCallback((selectedFile: File) => {
@@ -92,7 +93,7 @@ export default function PdfAnalyzer() {
         await new Promise(resolve => setTimeout(resolve, 900));
       }
 
-      const response = await analyzeApi.analyzePdf(formData);
+      const response = await budgetAnalyzerApi.analyzePdf(formData);
       setResult(response);
 
     } catch (err: any) {

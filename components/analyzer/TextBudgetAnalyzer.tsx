@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { analyzeApi } from '@/lib/api/client';
+import { apiClient } from '@/lib/api/client';
 import Logo from '../logo';
 import { UsageBadge } from '../usage/UsageBadge';
+import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
 
 interface ProjectData {
   type: 'residential' | 'commercial' | 'industrial' | 'infrastructure' | 'renovation';
@@ -48,7 +49,7 @@ export default function TextBudgetAnalyzer() {
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
 
   useEffect(() => {
-    analyzeApi.setTokenGetter(getToken);
+    apiClient.setTokenGetter(getToken);
   }, [getToken]);
 
   const validateForm = () => {
@@ -90,8 +91,14 @@ export default function TextBudgetAnalyzer() {
 
     try {
       console.log('🚀 Iniciando análisis con datos:', formData, config);
-      const response = await analyzeApi.analyzeProject(formData, config);
+      const response = await budgetAnalyzerApi.analyzeProject(formData, config);
       console.log('✅ Respuesta recibida:', response);
+      
+      // ✅ GUARDAR con el ID correcto del backend
+      const analysisId = response.data?.analysis_id || response.analysis_id || `analysis_${Date.now()}`;
+      localStorage.setItem(analysisId, JSON.stringify(response));
+      console.log('💾 Análisis guardado en localStorage con ID:', analysisId);
+      
       setResult(response);
     } catch (err: any) {
       console.error('❌ Error en análisis:', err);
@@ -103,8 +110,9 @@ export default function TextBudgetAnalyzer() {
 
   const handleViewFullAnalysis = () => {
     if (result) {
-      const analysisId = `analysis_${Date.now()}`;
-      localStorage.setItem(analysisId, JSON.stringify(result));
+      // ✅ Usar el mismo ID que guardamos en localStorage
+      const analysisId = result.data?.analysis_id || result.analysis_id || `analysis_${Date.now()}`;
+      console.log('🔗 Navegando a análisis con ID:', analysisId);
       router.push(`/analysis/${analysisId}`);
     }
   };
