@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Standalone build for deployment
-  output: 'standalone',
-
   async rewrites() {
     return [
       {
