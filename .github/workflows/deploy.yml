@@ -56,31 +56,41 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
         run: |
-          # Upload package
-          scp budget-deploy.tar.gz $VPS_USERNAME@$VPS_HOST:/tmp/
+          echo "🔑 Adding server to known_hosts..."
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $VPS_HOST >> ~/.ssh/known_hosts
           
-          # Deploy
-          ssh $VPS_USERNAME@$VPS_HOST << 'ENDSSH'
+          echo "📤 Uploading package..."
+          scp -o StrictHostKeyChecking=no budget-deploy.tar.gz $VPS_USERNAME@$VPS_HOST:/tmp/
+          
+          echo "🚀 Executing remote deployment script..."
+          ssh -o StrictHostKeyChecking=no $VPS_USERNAME@$VPS_HOST << 'ENDSSH'
             set -e
             
-            echo "🚀 Deploying Budget Analyzer..."
-            
+            echo "📂 Moving to deployment directory..."
             cd /var/www/budget-analyzer || { echo "❌ Directory not found"; exit 1; }
             
             # Backup
             echo "💾 Creating backup..."
-            tar -czf ../budget-backup-$(date +%Y%m%d-%H%M%S).tar.gz . || true
+            tar -czf ../budget-backup-$(date +%Y%m%d-%H%M%S).tar.gz . 2>/dev/null || true
             
             # Extract new version
             echo "📦 Extracting new version..."
-            tar -xzf /tmp/budget-deploy.tar.gz
-            rm /tmp/budget-deploy.tar.gz
+            if [ -f /tmp/budget-deploy.tar.gz ]; then
+              tar -xzf /tmp/budget-deploy.tar.gz
+              rm /tmp/budget-deploy.tar.gz
+              echo "✅ Extraction complete."
+            else
+              echo "❌ Error: /tmp/budget-deploy.tar.gz not found!"
+              exit 1
+            fi
             
             # Repair assets (standing in standalone folder)
             mkdir -p .next
             cp -r .next/static .next/static 2>/dev/null || true
             
             # Update environment
+            echo "📝 Updating environment variables..."
             cat > .env.production << 'ENVEOF'
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
@@ -90,11 +100,11 @@ jobs:
           ENVEOF
             
             # Restart
-            echo "🔄 Restarting service..."
+            echo "🔄 Restarting service with PM2..."
             pm2 restart saerti-budget || pm2 start ecosystem.config.js
             pm2 save
             
-            echo "✅ Deployment completed!"
+            echo "✅ Deployment completed successfully!"
           ENDSSH
       
       - name: Health Check
