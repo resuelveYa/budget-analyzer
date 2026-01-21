@@ -34,7 +34,7 @@ jobs:
       
       - name: Create deployment package
         run: |
-          mkdir -p deploy
+          mkdir -p deploy/.next
           cp -r .next/standalone/* deploy/
           cp -r .next/static deploy/.next/static
           cp -r public deploy/public 2>/dev/null || true
