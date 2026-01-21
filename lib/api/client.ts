@@ -11,10 +11,10 @@ class ApiClient {
 
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_API_URL || 
-        (process.env.NODE_ENV === 'development' 
-          ? '/api/backend' 
-          : 'https://api.resuelveya.cl/api'),
+      baseURL: process.env.NEXT_PUBLIC_API_URL ||
+        (process.env.NODE_ENV === 'development'
+          ? '/api/backend'
+          : '/api'),
       timeout: 180000, // 3 minutos para análisis con IA
       headers: {
         'Content-Type': 'application/json',
