@@ -121,6 +121,8 @@ jobs:
           VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
         run: |
           echo "🔙 Rolling back..."
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
           ssh $VPS_USERNAME@$VPS_HOST << 'ENDSSH'
             cd /var/www/budget-analyzer
             LATEST_BACKUP=$(ls -t ../budget-backup-*.tar.gz 2>/dev/null | head -1)
