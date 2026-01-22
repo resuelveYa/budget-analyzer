@@ -28,6 +28,7 @@ jobs:
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_CLERK_DOMAIN: resuelveya.cl
           NEXT_PUBLIC_API_URL: https://resuelveya.cl/api
           BACKEND_API_URL: https://resuelveya.cl/api
         run: npm run build
@@ -94,6 +95,7 @@ jobs:
             cat > .env.production << 'ENVEOF'
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_CLERK_DOMAIN=resuelveya.cl
           NEXT_PUBLIC_API_URL=https://resuelveya.cl/api
           NODE_ENV=production
           PORT=3002

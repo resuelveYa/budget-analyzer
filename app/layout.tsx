@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider localization={esES} domain="resuelveya.cl">
+    <ClerkProvider localization={esES}>
       <html lang="es">
         <body className={inter.className}>{children}</body>
       </html>
