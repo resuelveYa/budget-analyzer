@@ -34,7 +34,9 @@ export async function middleware(request: NextRequest) {
   // Budget analyzer is typically protected
   // If no user, redirect to landing's sign-in
   if (!user && !request.nextUrl.pathname.startsWith('/api/public')) {
-    const loginUrl = new URL('https://resuelveya.cl/sign-in', request.url)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://resuelveya.cl'
+    const loginUrl = new URL(`${baseUrl}/sign-in`, request.url)
+    loginUrl.searchParams.set('redirect_url', request.url)
     return NextResponse.redirect(loginUrl)
   }
 
