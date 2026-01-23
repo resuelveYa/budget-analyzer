@@ -1,5 +1,4 @@
-// app/(dashboard)/analyze/page.tsx
-import { currentUser } from '@clerk/nextjs/server';
+import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import TextBudgetAnalyzer from '@/components/analyzer/TextBudgetAnalyzer';
 
@@ -8,10 +7,11 @@ export const metadata = {
 };
 
 export default async function AnalyzePage() {
-  const user = await currentUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/sign-in');
+    redirect('https://resuelveya.cl/sign-in');
   }
 
   return <TextBudgetAnalyzer />;

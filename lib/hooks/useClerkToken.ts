@@ -1,6 +1,5 @@
-import { useAuth } from '@clerk/nextjs';
+import { getAccessToken } from '../supabase/client';
 
 export function useClerkToken() {
-  const { getToken } = useAuth();
-  return getToken;
+  return getAccessToken;
 }

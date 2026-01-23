@@ -1,4 +1,4 @@
-import { currentUser } from '@clerk/nextjs/server';
+import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,17 +6,20 @@ import Link from 'next/link';
 import { FileText, History, TrendingUp, Clock } from 'lucide-react';
 
 export default async function DashboardPage() {
-  const user = await currentUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/sign-in');
+    redirect('https://resuelveya.cl/sign-in');
   }
+
+  const firstName = user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'Usuario';
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold mb-2">
-          Hola, {user.firstName || 'Usuario'} 👋
+          Hola, {firstName} 👋
         </h1>
         <p className="text-xl text-muted-foreground">
           Bienvenido a tu dashboard

@@ -2,18 +2,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@clerk/nextjs';
+import { supabase } from '@/lib/supabase/client';
 import { usageApi } from '@/lib/api/usageApi';
 import type { UsageStats, BudgetAnalyzerMetrics } from '@/types/usage';
 
 export function useUsageStats() {
-  const { isSignedIn } = useAuth();
+  const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<UsageStats<BudgetAnalyzerMetrics> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchStats = async () => {
-    if (!isSignedIn) {
+    if (!user) {
       setLoading(false);
       return;
     }
@@ -33,24 +33,37 @@ export function useUsageStats() {
   };
 
   useEffect(() => {
-    fetchStats();
-    
-    // Refrescar cada 30 segundos
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
-  }, [isSignedIn]);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
 
-  return { 
-    stats, 
-    loading, 
-    error, 
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchStats();
+      // Refrescar cada 30 segundos
+      const interval = setInterval(fetchStats, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  return {
+    stats,
+    loading,
+    error,
     refetch: fetchStats,
     // Helpers
     canAnalyze: stats ? (
-      (stats.metrics.daily_analyses.limit === 'unlimited' || 
-       stats.metrics.daily_analyses.remaining !== 0) &&
-      (stats.metrics.monthly_analyses.limit === 'unlimited' || 
-       stats.metrics.monthly_analyses.remaining !== 0)
+      (stats.metrics.daily_analyses.limit === 'unlimited' ||
+        stats.metrics.daily_analyses.remaining !== 0) &&
+      (stats.metrics.monthly_analyses.limit === 'unlimited' ||
+        stats.metrics.monthly_analyses.remaining !== 0)
     ) : false
   };
 }

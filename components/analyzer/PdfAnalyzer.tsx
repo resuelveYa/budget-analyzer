@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useUser, useAuth } from '@clerk/nextjs';
+import { supabase, getAccessToken } from '@/lib/supabase/client';
 import { FileText, Upload, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,7 @@ interface PdfAnalysisProgress {
 }
 
 export default function PdfAnalyzer() {
-  const { user } = useUser();
-  const { getToken } = useAuth();
+  const [user, setUser] = useState<any>(null);
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -34,10 +33,14 @@ export default function PdfAnalyzer() {
     includeProviders: true,
   });
 
-  // Configurar token getter en el API client
+  // Configurar token getter y obtener usuario
   useEffect(() => {
-    apiClient.setTokenGetter(getToken);
-  }, [getToken]);
+    apiClient.setTokenGetter(getAccessToken);
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+  }, []);
 
   const handleFileSelect = useCallback((selectedFile: File) => {
     if (selectedFile.type !== 'application/pdf') {
@@ -131,9 +134,8 @@ export default function PdfAnalyzer() {
                 onDrop={handleDrop}
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  isDragging ? 'border-primary bg-primary/5' : 'border-muted'
-                }`}
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-muted'
+                  }`}
               >
                 {file ? (
                   <div className="space-y-4">

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@clerk/nextjs';
+import { getAccessToken } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Calculator, MapPin, Building, TrendingUp, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +28,6 @@ interface AnalysisConfig {
 }
 
 export default function TextBudgetAnalyzer() {
-  const { getToken } = useAuth();
   const router = useRouter();
   const [formData, setFormData] = useState<ProjectData>({
     type: 'residential',
@@ -49,8 +48,8 @@ export default function TextBudgetAnalyzer() {
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
 
   useEffect(() => {
-    apiClient.setTokenGetter(getToken);
-  }, [getToken]);
+    apiClient.setTokenGetter(getAccessToken);
+  }, []);
 
   const validateForm = () => {
     if (formData.type && formData.location && formData.area > 0) {
@@ -93,12 +92,12 @@ export default function TextBudgetAnalyzer() {
       console.log('🚀 Iniciando análisis con datos:', formData, config);
       const response = await budgetAnalyzerApi.analyzeProject(formData, config);
       console.log('✅ Respuesta recibida:', response);
-      
+
       // ✅ GUARDAR con el ID correcto del backend
       const analysisId = response.data?.analysis_id || response.analysis_id || `analysis_${Date.now()}`;
       localStorage.setItem(analysisId, JSON.stringify(response));
       console.log('💾 Análisis guardado en localStorage con ID:', analysisId);
-      
+
       setResult(response);
     } catch (err: any) {
       console.error('❌ Error en análisis:', err);
@@ -128,23 +127,23 @@ export default function TextBudgetAnalyzer() {
   // 🔥 FUNCIÓN ACTUALIZADA: Extrae presupuesto de la nueva estructura
   const extractBudget = (analysis: any) => {
     const data = analysis?.data?.analysis;
-    
+
     // Prioridad 1: presupuesto_estimado.total_clp (nueva estructura)
     if (data?.presupuesto_estimado?.total_clp) {
       return data.presupuesto_estimado.total_clp;
     }
-    
+
     // Prioridad 2: desglose_costos.total (estructura alternativa)
     if (data?.desglose_costos?.total) {
       return data.desglose_costos.total;
     }
-    
+
     // Fallback: presupuesto_ajustado (estructura antigua)
     if (data?.presupuesto_ajustado) {
       const match = data.presupuesto_ajustado.match(/[\d.,]+/);
       return match ? parseFloat(match[0].replace(/\./g, '').replace(',', '.')) : 0;
     }
-    
+
     // Si nada funciona, retornar el presupuesto estimado del form
     return formData.estimatedBudget || 0;
   };
@@ -152,7 +151,7 @@ export default function TextBudgetAnalyzer() {
   // 🔥 FUNCIÓN ACTUALIZADA: Extrae desglose de porcentajes
   const extractBreakdown = (analysis: any) => {
     const data = analysis?.data?.analysis;
-    
+
     // Prioridad 1: presupuesto_estimado con porcentajes (nueva estructura)
     if (data?.presupuesto_estimado) {
       const budget = data.presupuesto_estimado;
@@ -163,12 +162,12 @@ export default function TextBudgetAnalyzer() {
         'Gastos Generales': budget.overhead_percentage || 0
       };
     }
-    
+
     // Prioridad 2: Calcular porcentajes desde desglose_costos
     if (data?.desglose_costos) {
       const breakdown = data.desglose_costos;
       const total = breakdown.total || breakdown.subtotal || 1;
-      
+
       return {
         'Materiales': parseFloat(((breakdown.materiales || 0) / total * 100).toFixed(1)),
         'Mano de Obra': parseFloat(((breakdown.mano_obra || 0) / total * 100).toFixed(1)),
@@ -176,7 +175,7 @@ export default function TextBudgetAnalyzer() {
         'Gastos Generales': parseFloat(((breakdown.gastos_generales || 0) / total * 100).toFixed(1))
       };
     }
-    
+
     // Fallback: Valores por defecto
     return {
       'Materiales': 45,
@@ -414,7 +413,7 @@ export default function TextBudgetAnalyzer() {
                     ))}
                   </div>
 
-                  <Button 
+                  <Button
                     onClick={handleViewFullAnalysis}
                     className="w-full bg-white text-green-600 hover:bg-white/90"
                   >

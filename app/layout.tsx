@@ -1,6 +1,4 @@
 // app/layout.tsx
-import { ClerkProvider } from '@clerk/nextjs';
-import { esES } from '@clerk/localizations';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -28,10 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider localization={esES}>
-      <html lang="es">
-        <body className={inter.className}>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="es">
+      <body className={inter.className}>{children}</body>
+    </html>
   );
 }
