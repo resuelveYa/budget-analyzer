@@ -1,3 +1,5 @@
+'use client';
+
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
