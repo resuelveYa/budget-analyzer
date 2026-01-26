@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { usageApi } from '@/lib/api/usageApi';
 import type { UsageStats, BudgetAnalyzerMetrics } from '@/types/usage';
+import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 export function useUsageStats() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<UsageStats<BudgetAnalyzerMetrics> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +35,13 @@ export function useUsageStats() {
 
   useEffect(() => {
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session?.user) {
         setUser(session.user);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setUser(session?.user || null);
     });
 
