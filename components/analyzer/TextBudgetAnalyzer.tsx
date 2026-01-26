@@ -47,9 +47,6 @@ export default function TextBudgetAnalyzer() {
   const [error, setError] = useState<string | null>(null);
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
 
-  useEffect(() => {
-    apiClient.setTokenGetter(getAccessToken);
-  }, []);
 
   const validateForm = () => {
     if (formData.type && formData.location && formData.area > 0) {
