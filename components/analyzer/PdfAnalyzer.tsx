@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { supabase, getAccessToken } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 import { FileText, Upload, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,7 @@ interface PdfAnalysisProgress {
 }
 
 export default function PdfAnalyzer() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -33,12 +34,10 @@ export default function PdfAnalyzer() {
     includeProviders: true,
   });
 
-  // Configurar token getter y obtener usuario
+  // Configurar usuario (apiClient se configura en DashboardHeader)
   useEffect(() => {
-    apiClient.setTokenGetter(getAccessToken);
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
+    supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
+      setUser(data.user);
     });
   }, []);
 
