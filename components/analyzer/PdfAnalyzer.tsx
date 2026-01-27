@@ -18,8 +18,10 @@ interface PdfAnalysisProgress {
   message: string;
 }
 
+import { useAuth } from '@/components/auth/AuthContext';
+
 export default function PdfAnalyzer() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -34,12 +36,7 @@ export default function PdfAnalyzer() {
     includeProviders: true,
   });
 
-  // Configurar usuario (apiClient se configura en DashboardHeader)
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
-      setUser(data.user);
-    });
-  }, []);
+  // El token getter se configura en DashboardHeader
 
   const handleFileSelect = useCallback((selectedFile: File) => {
     if (selectedFile.type !== 'application/pdf') {

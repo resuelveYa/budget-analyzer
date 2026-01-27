@@ -7,8 +7,10 @@ import { usageApi } from '@/lib/api/usageApi';
 import type { UsageStats, BudgetAnalyzerMetrics } from '@/types/usage';
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 
+import { useAuth } from '@/components/auth/AuthContext';
+
 export function useUsageStats() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, isLoading: authLoading } = useAuth();
   const [stats, setStats] = useState<UsageStats<BudgetAnalyzerMetrics> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,21 +36,6 @@ export function useUsageStats() {
   };
 
   useEffect(() => {
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-      if (session?.user) {
-        setUser(session.user);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      setUser(session?.user || null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     if (user) {
       fetchStats();
       // Refrescar cada 30 segundos
@@ -59,7 +46,7 @@ export function useUsageStats() {
 
   return {
     stats,
-    loading,
+    loading: loading || authLoading,
     error,
     refetch: fetchStats,
     // Helpers

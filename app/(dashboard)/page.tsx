@@ -8,16 +8,10 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { FileText, History, Loader2 } from 'lucide-react';
 
-export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+import { useAuth } from '@/components/auth/AuthContext';
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
-      setUser(data.user);
-      setLoading(false);
-    });
-  }, []);
+export default function DashboardPage() {
+  const { user, isLoading: loading } = useAuth();
 
   if (loading) {
     return (

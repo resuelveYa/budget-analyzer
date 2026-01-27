@@ -34,6 +34,18 @@ export async function middleware(request: NextRequest) {
   // Budget analyzer is typically protected
   // If no user, redirect to landing's sign-in
   if (!user && !request.nextUrl.pathname.startsWith('/api/public')) {
+    // Check if it's a fetch/RSC request to avoid CORS issues with redirects
+    const isFetch = request.headers.get('accept')?.includes('text/x-component') ||
+      request.headers.get('accept')?.includes('application/json') ||
+      request.headers.get('next-router-prefetch')
+
+    if (isFetch) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'Unauthorized' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      )
+    }
+
     const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl'
     const loginUrl = new URL('/sign-in', landingUrl)
     loginUrl.searchParams.set('redirect_url', request.url)
