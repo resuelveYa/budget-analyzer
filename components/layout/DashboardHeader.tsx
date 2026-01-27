@@ -7,16 +7,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Logo from '@/components/logo';
 import { UsageHeaderIndicator } from '@/components/usage/UsageHeaderIndicator';
-import { apiClient } from '@/lib/api/client';
-import { getAccessToken } from '@/lib/supabase/client';
-import { useEffect } from 'react';
-
 export function DashboardHeader() {
   const router = useRouter();
-
-  useEffect(() => {
-    apiClient.setTokenGetter(getAccessToken);
-  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

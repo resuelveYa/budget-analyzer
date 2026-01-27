@@ -1,5 +1,6 @@
 // lib/api/client.ts - VERSIÓN LIMPIA SIN DUPLICACIÓN
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
+import { getAccessToken } from '@/lib/supabase/client';
 
 // ==========================================
 // CLIENTE API BASE - SOLO HTTP GENÉRICO
@@ -7,7 +8,6 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
 
 class ApiClient {
   private client: AxiosInstance;
-  private getTokenFunction: (() => Promise<string | null>) | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -27,11 +27,13 @@ class ApiClient {
     // Interceptor de request
     this.client.interceptors.request.use(
       async (config) => {
-        if (this.getTokenFunction) {
-          const token = await this.getTokenFunction();
+        try {
+          const token = await getAccessToken();
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
           }
+        } catch (error) {
+          console.error('❌ Error obteniendo token en interceptor:', error);
         }
         return config;
       },
@@ -66,18 +68,23 @@ class ApiClient {
 
         // Manejo de 401
         if (error.response?.status === 401) {
+          console.warn('⚠️ 401 detectado, verificando sesión...');
           if (typeof window !== 'undefined') {
-            window.location.href = 'https://resuelveya.cl/sign-in';
+            // Verificar si realmente no hay sesión antes de redirigir
+            getAccessToken().then(token => {
+              if (!token) {
+                console.error('🚫 Sesión inválida o expirada, redirigiendo a login...');
+                window.location.href = 'https://resuelveya.cl/sign-in';
+              } else {
+                console.warn('🤔 401 recibido pero hay un token presente. Posible error de permisos o token expirado en el servidor.');
+              }
+            });
           }
         }
 
         return Promise.reject(error);
       }
     );
-  }
-
-  setTokenGetter(getter: () => Promise<string | null>) {
-    this.getTokenFunction = getter;
   }
 
   // ==========================================

@@ -36,13 +36,15 @@ export function useUsageStats() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       fetchStats();
       // Refrescar cada 30 segundos
       const interval = setInterval(fetchStats, 30000);
       return () => clearInterval(interval);
+    } else if (!authLoading && !user) {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   return {
     stats,
