@@ -67,7 +67,7 @@ class ApiClient {
         // Manejo de 401
         if (error.response?.status === 401) {
           if (typeof window !== 'undefined') {
-            window.location.href = '/sign-in';
+            window.location.href = 'https://resuelveya.cl/sign-in';
           }
         }
 

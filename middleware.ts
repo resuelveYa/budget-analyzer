@@ -15,15 +15,25 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Eliminar cookies huérfanas en el subdominio para evitar conflictos
+            supabaseResponse.cookies.set(name, '', { ...options, maxAge: 0, domain: 'budget.resuelveya.cl' });
+
+            // Setear la cookie correcta en el dominio principal
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              domain: '.resuelveya.cl',
+              path: '/',
+            });
+          });
         },
       },
+      cookieOptions: {
+        domain: '.resuelveya.cl',
+        path: '/',
+        sameSite: 'lax',
+        secure: true,
+      }
     }
   )
 
