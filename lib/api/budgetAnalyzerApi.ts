@@ -36,7 +36,7 @@ class BudgetAnalyzerApi {
    * Análisis de PDF
    */
   async analyzePdf(
-    fileOrFormData: File | FormData, 
+    fileOrFormData: File | FormData,
     options?: PdfAnalysisConfig
   ): Promise<any> {
     let formData: FormData;
@@ -48,7 +48,7 @@ class BudgetAnalyzerApi {
       // Si es File, crear FormData
       formData = new FormData();
       formData.append('file', fileOrFormData);
-      
+
       if (options?.analysisDepth) {
         formData.append('analysisDepth', options.analysisDepth);
       }
@@ -69,8 +69,35 @@ class BudgetAnalyzerApi {
       },
       timeout: 300000, // 5 minutos para PDFs
     });
-    
+
     return response.data.data || response.data;
+  }
+
+  /**
+   * Análisis de proyecto con múltiples PDFs
+   */
+  async analyzePdfProject(
+    files: File[],
+    config?: any
+  ): Promise<any> {
+    const formData = new FormData();
+
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+
+    if (config?.analysisDepth) {
+      formData.append('analysisDepth', config.analysisDepth);
+    }
+
+    const response = await apiClient.post('/budget-analysis/project', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 600000, // 10 minutos para proyectos complejos
+    });
+
+    return response.data;
   }
 
   /**

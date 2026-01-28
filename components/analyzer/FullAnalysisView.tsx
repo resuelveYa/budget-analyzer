@@ -8,13 +8,16 @@ import { FileText, TrendingUp, AlertTriangle, MapPin, Calendar, Download } from 
 import { useRouter } from 'next/navigation';
 
 interface FullAnalysisViewProps {
-  analysisData: any;
+  analysis: any;
+  isConsolidated?: boolean;
 }
 
-export default function FullAnalysisView({ analysisData }: FullAnalysisViewProps) {
+export default function FullAnalysisView({ analysis: analysisProp, isConsolidated }: FullAnalysisViewProps) {
   const router = useRouter();
-  const analysis = analysisData?.data?.analysis || {};
-  const projectInfo = analysisData?.data?.project_info || {};
+
+  // Normalizar los datos: si viene anidado en data.analysis o es el objeto directo
+  const analysis = analysisProp?.data?.analysis || analysisProp?.analysis || analysisProp || {};
+  const projectInfo = analysisProp?.data?.project_info || {};
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
@@ -30,18 +33,18 @@ export default function FullAnalysisView({ analysisData }: FullAnalysisViewProps
     if (analysis.presupuesto_estimado?.total_clp) {
       return analysis.presupuesto_estimado.total_clp;
     }
-    
+
     // Prioridad 2: desglose_costos.total
     if (analysis.desglose_costos?.total) {
       return analysis.desglose_costos.total;
     }
-    
+
     // Fallback: presupuesto_ajustado (estructura antigua)
     if (analysis.presupuesto_ajustado) {
       const match = analysis.presupuesto_ajustado.match(/[\d.,]+/);
       return match ? parseFloat(match[0].replace(/\./g, '').replace(',', '.')) : 0;
     }
-    
+
     return projectInfo.estimated_budget || 0;
   };
 
@@ -51,11 +54,11 @@ export default function FullAnalysisView({ analysisData }: FullAnalysisViewProps
     if (analysis.desglose_costos) {
       return analysis.desglose_costos;
     }
-    
+
     // Fallback: calcular desde porcentajes
     const total = extractBudget();
     const percentages = analysis.presupuesto_estimado || {};
-    
+
     return {
       materiales: (total * (percentages.materials_percentage || 45)) / 100,
       mano_obra: (total * (percentages.labor_percentage || 35)) / 100,
@@ -70,10 +73,12 @@ export default function FullAnalysisView({ analysisData }: FullAnalysisViewProps
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+          <Button variant="ghost" onClick={() => router.back()} className="mb-4 hover:bg-primary/10 transition-colors">
             ← Volver
           </Button>
-          <h1 className="text-4xl font-bold mb-2">Análisis Presupuestario Completo</h1>
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+            {isConsolidated ? 'Informe Consolidado de Proyecto' : 'Análisis Presupuestario Detallado'}
+          </h1>
           <div className="flex items-center space-x-4 text-muted-foreground">
             <span className="flex items-center">
               <MapPin className="w-4 h-4 mr-1" />
@@ -178,7 +183,7 @@ export default function FullAnalysisView({ analysisData }: FullAnalysisViewProps
                     </div>
                   );
                 })}
-                
+
                 {/* Total */}
                 <div className="border-t-2 border-gray-200 pt-4 mt-4">
                   <div className="flex justify-between items-center">
@@ -308,11 +313,10 @@ export default function FullAnalysisView({ analysisData }: FullAnalysisViewProps
                           <p className="text-xs text-blue-600 mt-1">📍 {proveedor.ubicacion}</p>
                         )}
                         {proveedor.confiabilidad && (
-                          <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${
-                            proveedor.confiabilidad === 'alta' ? 'bg-green-200 text-green-800' :
-                            proveedor.confiabilidad === 'media' ? 'bg-yellow-200 text-yellow-800' :
-                            'bg-gray-200 text-gray-800'
-                          }`}>
+                          <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${proveedor.confiabilidad === 'alta' ? 'bg-green-200 text-green-800' :
+                              proveedor.confiabilidad === 'media' ? 'bg-yellow-200 text-yellow-800' :
+                                'bg-gray-200 text-gray-800'
+                            }`}>
                             Confiabilidad: {proveedor.confiabilidad}
                           </span>
                         )}
@@ -342,18 +346,16 @@ export default function FullAnalysisView({ analysisData }: FullAnalysisViewProps
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-semibold">{riesgo.factor || riesgo.riesgo}</h4>
                         <div className="flex gap-2">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            riesgo.probability === 'alta' || riesgo.probabilidad === 'alta' ? 'bg-red-100 text-red-700' :
-                            riesgo.probability === 'media' || riesgo.probabilidad === 'media' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs rounded-full ${riesgo.probability === 'alta' || riesgo.probabilidad === 'alta' ? 'bg-red-100 text-red-700' :
+                              riesgo.probability === 'media' || riesgo.probabilidad === 'media' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-green-100 text-green-700'
+                            }`}>
                             Prob: {riesgo.probability || riesgo.probabilidad}
                           </span>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            riesgo.impact === 'alto' || riesgo.impacto === 'alto' ? 'bg-red-100 text-red-700' :
-                            riesgo.impact === 'medio' || riesgo.impacto === 'medio' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs rounded-full ${riesgo.impact === 'alto' || riesgo.impacto === 'alto' ? 'bg-red-100 text-red-700' :
+                              riesgo.impact === 'medio' || riesgo.impacto === 'medio' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-green-100 text-green-700'
+                            }`}>
                             Impacto: {riesgo.impact || riesgo.impacto}
                           </span>
                         </div>
