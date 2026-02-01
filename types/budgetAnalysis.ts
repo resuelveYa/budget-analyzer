@@ -3,7 +3,7 @@
 export interface ProjectData {
   id?: string;
   name?: string;
-  type: 'residential' | 'commercial' | 'industrial' | 'infrastructure' | 'renovation';
+  type: 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto';
   location: string;
   area: number;
   estimatedBudget?: number;
@@ -17,7 +17,7 @@ export interface ProjectData {
 }
 
 export interface AnalysisConfig {
-  analysisDepth?: 'basic' | 'standard' | 'detailed';
+  analysisDepth?: 'quick' | 'standard' | 'deep';
   includeMarketData?: boolean;
   includeHistoricalData?: boolean;
   includeProviders?: boolean;
@@ -68,7 +68,7 @@ export interface ParsedAnalysis {
   recomendaciones?: string[];
   cronograma_sugerido?: string;
   contingencia_recomendada?: string;
-  
+
   // Metadatos del análisis
   metadata?: {
     generated_at: string;
@@ -171,16 +171,16 @@ export interface BudgetAnalysisState {
 
 // Para formularios
 export interface BudgetAnalysisFormData extends ProjectData {
-  analysisDepth: 'basic' | 'standard' | 'detailed';
+  analysisDepth: 'quick' | 'standard' | 'deep';
   includeMarketData: boolean;
   saveAnalysis: boolean;
 }
 
 // ✅ TIPOS PARA PDF ANALYSIS - CORREGIDOS PARA BACKEND OPTIMIZADO
 export interface PdfAnalysisConfig {
-  analysisDepth?: 'basic' | 'standard' | 'detailed';
+  analysisDepth?: 'quick' | 'standard' | 'deep';
   includeProviders?: boolean;
-  projectType?: 'residential' | 'commercial' | 'industrial' | 'infrastructure' | 'renovation';
+  projectType?: 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto';
   projectLocation?: string;
   maxCostEstimate?: number;
   saveAnalysis?: boolean;
@@ -287,27 +287,27 @@ export interface PdfAnalysisResult {
 
 // ✅ NUEVA: Type guards para verificar estructura
 export function isParsedAnalysis(analysis: any): analysis is ParsedAnalysis {
-  return analysis && 
-         typeof analysis === 'object' && 
-         typeof analysis.resumen_ejecutivo === 'string' &&
-         typeof analysis.presupuesto_ajustado === 'string';
+  return analysis &&
+    typeof analysis === 'object' &&
+    typeof analysis.resumen_ejecutivo === 'string' &&
+    typeof analysis.presupuesto_ajustado === 'string';
 }
 
 export function hasDetailedBreakdown(analysis: ParsedAnalysis): boolean {
-  return !!(analysis.desglose_detallado && 
-            Object.keys(analysis.desglose_detallado).length > 0);
+  return !!(analysis.desglose_detallado &&
+    Object.keys(analysis.desglose_detallado).length > 0);
 }
 
 export function hasRiskAnalysis(analysis: ParsedAnalysis): boolean {
-  return !!(analysis.analisis_riesgos && 
-            Array.isArray(analysis.analisis_riesgos) && 
-            analysis.analisis_riesgos.length > 0);
+  return !!(analysis.analisis_riesgos &&
+    Array.isArray(analysis.analisis_riesgos) &&
+    analysis.analisis_riesgos.length > 0);
 }
 
 export function hasRecommendations(analysis: ParsedAnalysis): boolean {
-  return !!(analysis.recomendaciones && 
-            Array.isArray(analysis.recomendaciones) && 
-            analysis.recomendaciones.length > 0);
+  return !!(analysis.recomendaciones &&
+    Array.isArray(analysis.recomendaciones) &&
+    analysis.recomendaciones.length > 0);
 }
 
 // ✅ NUEVA: Helper para extraer y parsear contenido
@@ -321,7 +321,7 @@ export function parseAnalysisContent(analysis: BudgetAnalysis): ParsedAnalysis {
         return parsedData as ParsedAnalysis;
       }
     }
-    
+
     // Si ya tiene la estructura correcta, usarla directamente
     if (analysis.desglose_detallado || analysis.presupuesto_ajustado) {
       return {
@@ -335,7 +335,7 @@ export function parseAnalysisContent(analysis: BudgetAnalysis): ParsedAnalysis {
         contingencia_recomendada: analysis.contingencia_recomendada
       };
     }
-    
+
     // Fallback: estructura básica
     return {
       resumen_ejecutivo: analysis.resumen_ejecutivo || "Análisis en proceso",
@@ -439,7 +439,7 @@ export interface ProcessingTimeEstimate {
 }
 
 // 🔥 TIPOS DE ERROR específicos del sistema optimizado
-export type OptimizedSystemError = 
+export type OptimizedSystemError =
   | 'COST_LIMIT_EXCEEDED'
   | 'DAILY_COST_LIMIT'
   | 'HOURLY_ANALYSIS_LIMIT'
@@ -492,7 +492,7 @@ export interface BudgetAnalysis {
   presupuesto_ajustado: string;
   nota: string;
   contenido_original: string; // ✅ AGREGADO: El JSON embebido en markdown
-  
+
   // Campos opcionales que pueden venir directamente o parseados
   desglose_detallado?: {
     estructura?: BudgetBreakdown;
@@ -514,7 +514,7 @@ export interface BudgetAnalysis {
   recomendaciones?: string[];
   cronograma_sugerido?: string;
   contingencia_recomendada?: string;
-  
+
   // Metadatos del análisis
   metadata?: {
     generated_at: string;

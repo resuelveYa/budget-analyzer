@@ -31,8 +31,8 @@ export default function PdfAnalyzer() {
   const [error, setError] = useState<string | null>(null);
 
   const [config, setConfig] = useState({
-    analysisDepth: 'standard' as 'basic' | 'standard' | 'detailed',
-    projectType: 'residential' as 'residential' | 'commercial' | 'industrial' | 'infrastructure' | 'renovation',
+    analysisDepth: 'standard' as 'quick' | 'standard' | 'deep',
+    projectType: 'auto' as 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto',
     projectLocation: 'Santiago, Chile',
     includeProviders: true,
   });
@@ -214,9 +214,9 @@ export default function PdfAnalyzer() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="basic">Básico</SelectItem>
+                    <SelectItem value="quick">Básico (Rápido)</SelectItem>
                     <SelectItem value="standard">Estándar</SelectItem>
-                    <SelectItem value="detailed">Detallado (Tesseract + Claude)</SelectItem>
+                    <SelectItem value="deep">Detallado (Tesseract + Claude)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -80,10 +80,7 @@ class BudgetAnalyzerApi {
    */
   async analyzePdfProject(
     files: File[],
-    config?: {
-      projectType?: 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto';
-      analysisDepth?: 'quick' | 'standard' | 'deep';
-    }
+    config?: PdfAnalysisConfig
   ): Promise<any> {
     const formData = new FormData();
 
