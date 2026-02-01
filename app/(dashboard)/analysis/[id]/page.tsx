@@ -7,6 +7,7 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import FullAnalysisView from '@/components/analyzer/FullAnalysisView';
+import DynamicAnalysisView from '@/components/analyzer/DynamicAnalysisView';
 import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
 import type { AnalysisHistoryItem } from '@/types/budgetAnalysis';
 
@@ -34,7 +35,7 @@ export default function AnalysisDetailPage() {
         try {
           const data = JSON.parse(stored);
           console.log('✅ Análisis encontrado en localStorage:', data);
-          
+
           // Verificar que tenga la estructura correcta
           if (data.data?.analysis || data.analysis) {
             setAnalysisData(data);
@@ -49,20 +50,20 @@ export default function AnalysisDetailPage() {
       // ESTRATEGIA 2: Buscar en historial del backend
       console.log('🔍 No encontrado en localStorage, buscando en backend...');
       const response = await budgetAnalyzerApi.getHistory(100);
-      
+
       if (response?.success && response.data?.analyses) {
         console.log('📋 Total de análisis en backend:', response.data.analyses.length);
-        
+
         // Buscar el análisis
         const found = response.data.analyses.find(
-          (a: AnalysisHistoryItem) => 
-            String(a.analysis_id) === String(id) || 
+          (a: AnalysisHistoryItem) =>
+            String(a.analysis_id) === String(id) ||
             String(a.id) === String(id)
         );
-        
+
         if (found) {
           console.log('✅ Análisis encontrado en backend:', found);
-          
+
           // Si el análisis tiene toda la data en details, úsala
           if (found.details && Object.keys(found.details).length > 0) {
             const formattedData = {
@@ -96,9 +97,9 @@ export default function AnalysisDetailPage() {
                 analysis_id: found.analysis_id
               }
             };
-            
+
             setAnalysisData(formattedData);
-            
+
             // Guardar en localStorage para futuros accesos
             localStorage.setItem(id, JSON.stringify(formattedData));
           } else {
@@ -122,12 +123,12 @@ export default function AnalysisDetailPage() {
                 analysis_id: found.analysis_id
               }
             };
-            
+
             setAnalysisData(formattedData);
             localStorage.setItem(id, JSON.stringify(formattedData));
           }
         } else {
-          console.error('❌ Análisis no encontrado. IDs disponibles:', 
+          console.error('❌ Análisis no encontrado. IDs disponibles:',
             response.data.analyses.map((a: AnalysisHistoryItem) => ({
               id: a.id,
               analysis_id: a.analysis_id
@@ -138,7 +139,7 @@ export default function AnalysisDetailPage() {
       } else {
         setError('Error cargando análisis del servidor');
       }
-      
+
     } catch (err: any) {
       console.error('❌ Error cargando análisis:', err);
       setError(err.message || 'Error cargando el análisis');
@@ -199,6 +200,19 @@ export default function AnalysisDetailPage() {
       </div>
     );
   }
+  // Detectar tipo de análisis: PDF vs manual/quick
+  const isPdfAnalysis = () => {
+    const analysisId = analysisData?.data?.analysis_id || '';
+    const analysisType = analysisData?.analysis_type || analysisData?.data?.analysis_type;
 
-  return <FullAnalysisView analysisData={analysisData} />;
+    // Detectar por ID (project_*) o por tipo explícito
+    return analysisId.startsWith('project_') || analysisType === 'pdf';
+  };
+
+  // Renderizar vista apropiada según tipo de análisis
+  if (isPdfAnalysis()) {
+    return <DynamicAnalysisView analysis={analysisData} />;
+  }
+
+  return <FullAnalysisView analysis={analysisData} />;
 }

@@ -1,10 +1,18 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Detect development mode
+const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true' || process.env.NODE_ENV === 'development'
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
+
+  // Cookie config varies between dev and production
+  const cookieConfig = isDevMode
+    ? { path: '/', sameSite: 'lax' as const, secure: false }
+    : { domain: '.resuelveya.cl', path: '/', sameSite: 'lax' as const, secure: true }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,34 +23,30 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
+          cookiesToSet.forEach(({ name, value }) => {
             request.cookies.set(name, value)
           })
           supabaseResponse = NextResponse.next({
             request,
           })
           cookiesToSet.forEach(({ name, value, options }) => {
-            // Eliminar cookie del subdominio si existiera
-            supabaseResponse.cookies.set(name, '', {
-              ...options,
-              domain: 'budget.resuelveya.cl',
-              maxAge: 0,
-            })
-            // Setear la cookie wildcard correcta
+            if (!isDevMode) {
+              // En producción: eliminar cookie del subdominio si existiera
+              supabaseResponse.cookies.set(name, '', {
+                ...options,
+                domain: 'budget.resuelveya.cl',
+                maxAge: 0,
+              })
+            }
+            // Setear la cookie (con o sin dominio según entorno)
             supabaseResponse.cookies.set(name, value, {
               ...options,
-              domain: '.resuelveya.cl',
-              path: '/',
+              ...cookieConfig,
             })
           })
         },
       },
-      cookieOptions: {
-        domain: '.resuelveya.cl',
-        path: '/',
-        sameSite: 'lax',
-        secure: true,
-      }
+      cookieOptions: cookieConfig
     }
   )
 

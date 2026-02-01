@@ -113,8 +113,9 @@ export default function FullAnalysisView({ analysis: analysisProp, isConsolidate
 
       {/* Tabs de contenido */}
       <Tabs defaultValue="resumen" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="desglose">Desglose</TabsTrigger>
           <TabsTrigger value="factores">Factores</TabsTrigger>
           <TabsTrigger value="riesgos">Riesgos</TabsTrigger>
@@ -154,7 +155,116 @@ export default function FullAnalysisView({ analysis: analysisProp, isConsolidate
           )}
         </TabsContent>
 
-        {/* Tab Desglose */}
+        {/* Tab Documentos - Para análisis de proyectos PDF */}
+        <TabsContent value="documentos" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                Documentos Analizados ({analysis.archivos_analizados?.length || analysis.documentos_procesados || 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {analysis.archivos_analizados && analysis.archivos_analizados.length > 0 ? (
+                <div className="space-y-6">
+                  {analysis.archivos_analizados.map((doc: any, idx: number) => (
+                    <div key={idx} className="border rounded-lg p-4 bg-gradient-to-r from-slate-50 to-blue-50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-semibold text-lg text-blue-900">
+                            📄 {doc.metadata?.filename || `Documento ${idx + 1}`}
+                          </h4>
+                          <span className="text-sm text-blue-600 capitalize">
+                            {doc.documento?.tipo || 'Documento técnico'}
+                          </span>
+                        </div>
+                        {doc.presupuesto?.tiene_datos_presupuestarios && (
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500">Total con IVA</p>
+                            <p className="text-lg font-bold text-green-600">
+                              {formatCurrency(doc.presupuesto.total_con_iva || 0)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Resumen del documento */}
+                      {doc.documento?.resumen && (
+                        <div className="mb-3">
+                          <p className="text-sm text-gray-700 bg-white/60 p-3 rounded">
+                            {doc.documento.resumen}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Puntos clave */}
+                      {doc.documento?.puntos_clave && doc.documento.puntos_clave.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs font-medium text-gray-600 mb-2">Puntos clave:</p>
+                          <ul className="text-sm space-y-1">
+                            {doc.documento.puntos_clave.slice(0, 5).map((punto: string, i: number) => (
+                              <li key={i} className="flex items-start">
+                                <span className="text-blue-500 mr-2">•</span>
+                                <span className="text-gray-700">{punto}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Items de presupuesto (si es documento de presupuesto) */}
+                      {doc.items && doc.items.length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-xs font-medium text-gray-600 mb-2">
+                            Items principales ({doc.items.length} total):
+                          </p>
+                          <div className="grid grid-cols-1 gap-1 text-xs">
+                            {doc.items.slice(0, 5).map((item: any, i: number) => (
+                              <div key={i} className="flex justify-between bg-white p-2 rounded">
+                                <span className="text-gray-700 truncate max-w-[60%]">
+                                  {item.codigo ? `${item.codigo} - ` : ''}{item.descripcion}
+                                </span>
+                                <span className="font-medium text-blue-600">
+                                  {formatCurrency(item.total || item.subtotal || 0)}
+                                </span>
+                              </div>
+                            ))}
+                            {doc.items.length > 5 && (
+                              <p className="text-gray-500 text-center pt-1">
+                                + {doc.items.length - 5} items más
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Info del proyecto detectado */}
+                      {doc.proyecto?.nombre && (
+                        <div className="mt-3 pt-3 border-t text-sm">
+                          <span className="text-gray-500">Proyecto: </span>
+                          <span className="font-medium text-gray-800">{doc.proyecto.nombre}</span>
+                          {doc.proyecto.ubicacion?.region && (
+                            <span className="text-gray-600 ml-2">
+                              📍 {doc.proyecto.ubicacion.region}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>No hay documentos individuales para mostrar.</p>
+                  <p className="text-sm mt-1">
+                    Se procesaron {analysis.documentos_procesados || 0} archivo(s).
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
         <TabsContent value="desglose" className="space-y-4">
           <Card>
             <CardHeader>
@@ -314,8 +424,8 @@ export default function FullAnalysisView({ analysis: analysisProp, isConsolidate
                         )}
                         {proveedor.confiabilidad && (
                           <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${proveedor.confiabilidad === 'alta' ? 'bg-green-200 text-green-800' :
-                              proveedor.confiabilidad === 'media' ? 'bg-yellow-200 text-yellow-800' :
-                                'bg-gray-200 text-gray-800'
+                            proveedor.confiabilidad === 'media' ? 'bg-yellow-200 text-yellow-800' :
+                              'bg-gray-200 text-gray-800'
                             }`}>
                             Confiabilidad: {proveedor.confiabilidad}
                           </span>
@@ -347,14 +457,14 @@ export default function FullAnalysisView({ analysis: analysisProp, isConsolidate
                         <h4 className="font-semibold">{riesgo.factor || riesgo.riesgo}</h4>
                         <div className="flex gap-2">
                           <span className={`px-2 py-1 text-xs rounded-full ${riesgo.probability === 'alta' || riesgo.probabilidad === 'alta' ? 'bg-red-100 text-red-700' :
-                              riesgo.probability === 'media' || riesgo.probabilidad === 'media' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-green-100 text-green-700'
+                            riesgo.probability === 'media' || riesgo.probabilidad === 'media' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
                             }`}>
                             Prob: {riesgo.probability || riesgo.probabilidad}
                           </span>
                           <span className={`px-2 py-1 text-xs rounded-full ${riesgo.impact === 'alto' || riesgo.impacto === 'alto' ? 'bg-red-100 text-red-700' :
-                              riesgo.impact === 'medio' || riesgo.impacto === 'medio' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-green-100 text-green-700'
+                            riesgo.impact === 'medio' || riesgo.impacto === 'medio' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
                             }`}>
                             Impacto: {riesgo.impact || riesgo.impacto}
                           </span>

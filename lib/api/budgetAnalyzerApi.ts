@@ -75,16 +75,26 @@ class BudgetAnalyzerApi {
 
   /**
    * Análisis de proyecto con múltiples PDFs
+   * @param files - Array de archivos PDF
+   * @param config - Configuración: projectType, analysisDepth
    */
   async analyzePdfProject(
     files: File[],
-    config?: any
+    config?: {
+      projectType?: 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto';
+      analysisDepth?: 'quick' | 'standard' | 'deep';
+    }
   ): Promise<any> {
     const formData = new FormData();
 
     files.forEach(file => {
       formData.append('files', file);
     });
+
+    // Project type for intelligent analysis
+    if (config?.projectType) {
+      formData.append('projectType', config.projectType);
+    }
 
     if (config?.analysisDepth) {
       formData.append('analysisDepth', config.analysisDepth);
@@ -94,7 +104,7 @@ class BudgetAnalyzerApi {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 600000, // 10 minutos para proyectos complejos
+      timeout: 1800000, // 30 minutos para proyectos complejos (Multi-Pass Deep Analysis)
     });
 
     return response.data;
@@ -167,6 +177,19 @@ class BudgetAnalyzerApi {
     const response = await apiClient.post('/budget-analysis/pdf/compare', {
       analysisIds,
       comparisonType
+    });
+    return response.data;
+  }
+
+  /**
+   * Exportar análisis a PDF
+   */
+  async exportToPdf(analysis: any, options: { margin?: number } = {}) {
+    const response = await apiClient.post('/budget-analysis/export', {
+      analysis,
+      options
+    }, {
+      responseType: 'blob'
     });
     return response.data;
   }

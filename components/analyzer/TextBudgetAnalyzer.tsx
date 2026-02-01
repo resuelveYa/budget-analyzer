@@ -4,7 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { getAccessToken } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Calculator, MapPin, Building, TrendingUp, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calculator, MapPin, Building, TrendingUp, Loader2, AlertCircle, CheckCircle, FileUp, FileText } from 'lucide-react';
+import PdfUploadZone from './PdfUploadZone';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -46,6 +47,8 @@ export default function TextBudgetAnalyzer() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+  const [activeTab, setActiveTab] = useState<'text' | 'pdf'>('pdf'); // Default to PDF mode
+  const [pdfResult, setPdfResult] = useState<any>(null);
 
 
   const validateForm = () => {
@@ -200,171 +203,210 @@ export default function TextBudgetAnalyzer() {
           </div>
         </div>
 
+        {/* Tabs de modo de análisis */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex bg-white/10 backdrop-blur-lg rounded-xl p-1">
+            <button
+              onClick={() => setActiveTab('pdf')}
+              className={`flex items-center px-6 py-3 rounded-lg font-medium transition-all ${activeTab === 'pdf'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                : 'text-blue-100 hover:text-white hover:bg-white/10'
+                }`}
+            >
+              <FileUp className="mr-2 h-5 w-5" />
+              Subir PDFs
+            </button>
+            <button
+              onClick={() => setActiveTab('text')}
+              className={`flex items-center px-6 py-3 rounded-lg font-medium transition-all ${activeTab === 'text'
+                ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-lg'
+                : 'text-blue-100 hover:text-white hover:bg-white/10'
+                }`}
+            >
+              <FileText className="mr-2 h-5 w-5" />
+              Datos Manuales
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="bg-white/10 backdrop-blur-lg border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <Building className="mr-2 h-5 w-5" />
-                  Datos del Proyecto
-                </CardTitle>
-                <CardDescription className="text-blue-100">
-                  Completa la información básica
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleAnalyze} className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Tipo de Proyecto *
-                    </label>
-                    <Select
-                      value={formData.type}
-                      onValueChange={(v: any) => handleInputChange('type', v)}
-                    >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="residential">Residencial</SelectItem>
-                        <SelectItem value="commercial">Comercial</SelectItem>
-                        <SelectItem value="industrial">Industrial</SelectItem>
-                        <SelectItem value="infrastructure">Infraestructura</SelectItem>
-                        <SelectItem value="renovation">Renovación</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            {/* PDF Upload Mode */}
+            {activeTab === 'pdf' && (
+              <PdfUploadZone
+                onAnalysisComplete={(analysisResult) => {
+                  setPdfResult(analysisResult);
+                  console.log('📊 PDF Analysis result:', analysisResult);
+                }}
+              />
+            )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Ubicación *
-                    </label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-3 h-5 w-5 text-blue-300" />
-                      <input
-                        type="text"
-                        placeholder="Ej: Valdivia, Los Ríos"
-                        value={formData.location}
-                        onChange={(e) => handleInputChange('location', e.target.value)}
-                        className="w-full pl-11 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Text Analysis Mode */}
+            {activeTab === 'text' && (
+              <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center">
+                    <Building className="mr-2 h-5 w-5" />
+                    Datos del Proyecto
+                  </CardTitle>
+                  <CardDescription className="text-blue-100">
+                    Completa la información básica
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleAnalyze} className="space-y-6">
                     <div>
                       <label className="block text-sm font-medium text-white mb-2">
-                        Área (m²) *
+                        Tipo de Proyecto *
                       </label>
-                      <input
-                        type="number"
-                        placeholder="120"
-                        value={formData.area || ''}
-                        onChange={(e) => handleInputChange('area', parseFloat(e.target.value) || 0)}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
+                      <Select
+                        value={formData.type}
+                        onValueChange={(v: any) => handleInputChange('type', v)}
+                      >
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="residential">Residencial</SelectItem>
+                          <SelectItem value="commercial">Comercial</SelectItem>
+                          <SelectItem value="industrial">Industrial</SelectItem>
+                          <SelectItem value="infrastructure">Infraestructura</SelectItem>
+                          <SelectItem value="renovation">Renovación</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium text-white mb-2">
-                        Presupuesto Est. (CLP)
+                        Ubicación *
                       </label>
-                      <input
-                        type="text"
-                        placeholder="75.000.000"
-                        value={formData.estimatedBudget ? formatChileanNumber(formData.estimatedBudget) : ''}
-                        onChange={(e) => {
-                          const rawValue = parseChileanNumber(e.target.value);
-                          handleInputChange('estimatedBudget', rawValue);
-                        }}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 h-5 w-5 text-blue-300" />
+                        <input
+                          type="text"
+                          placeholder="Ej: Valdivia, Los Ríos"
+                          value={formData.location}
+                          onChange={(e) => handleInputChange('location', e.target.value)}
+                          className="w-full pl-11 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Descripción
-                    </label>
-                    <textarea
-                      placeholder="Casa habitacional 2 pisos, terreno en pendiente..."
-                      value={formData.description}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
-                      rows={4}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                    />
-                  </div>
-
-                  <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                    <h3 className="text-white font-medium mb-4">Configuración</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-white mb-2">
-                          Profundidad
+                          Área (m²) *
                         </label>
-                        <Select
-                          value={config.analysisDepth}
-                          onValueChange={(v: any) => setConfig(p => ({ ...p, analysisDepth: v }))}
-                        >
-                          <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="basic">Básico</SelectItem>
-                            <SelectItem value="standard">Estándar</SelectItem>
-                            <SelectItem value="detailed">Detallado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center space-x-2 pt-7">
                         <input
-                          type="checkbox"
-                          id="marketData"
-                          checked={config.includeMarketData}
-                          onChange={(e) => setConfig(p => ({ ...p, includeMarketData: e.target.checked }))}
-                          className="rounded border-white/20"
+                          type="number"
+                          placeholder="120"
+                          value={formData.area || ''}
+                          onChange={(e) => handleInputChange('area', parseFloat(e.target.value) || 0)}
+                          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         />
-                        <label htmlFor="marketData" className="text-sm text-white">
-                          Incluir datos de mercado
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Presupuesto Est. (CLP)
                         </label>
+                        <input
+                          type="text"
+                          placeholder="75.000.000"
+                          value={formData.estimatedBudget ? formatChileanNumber(formData.estimatedBudget) : ''}
+                          onChange={(e) => {
+                            const rawValue = parseChileanNumber(e.target.value);
+                            handleInputChange('estimatedBudget', rawValue);
+                          }}
+                          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        />
                       </div>
                     </div>
-                  </div>
 
-                  {validationStatus === 'valid' && !isAnalyzing && !result && (
-                    <div className="flex items-center space-x-2 text-green-400">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="text-sm">Listo para analizar</span>
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">
+                        Descripción
+                      </label>
+                      <textarea
+                        placeholder="Casa habitacional 2 pisos, terreno en pendiente..."
+                        value={formData.description}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                        rows={4}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                      />
                     </div>
-                  )}
 
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <h3 className="text-white font-medium mb-4">Configuración</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Profundidad
+                          </label>
+                          <Select
+                            value={config.analysisDepth}
+                            onValueChange={(v: any) => setConfig(p => ({ ...p, analysisDepth: v }))}
+                          >
+                            <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="basic">Básico</SelectItem>
+                              <SelectItem value="standard">Estándar</SelectItem>
+                              <SelectItem value="detailed">Detallado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center space-x-2 pt-7">
+                          <input
+                            type="checkbox"
+                            id="marketData"
+                            checked={config.includeMarketData}
+                            onChange={(e) => setConfig(p => ({ ...p, includeMarketData: e.target.checked }))}
+                            className="rounded border-white/20"
+                          />
+                          <label htmlFor="marketData" className="text-sm text-white">
+                            Incluir datos de mercado
+                          </label>
+                        </div>
+                      </div>
+                    </div>
 
-                  <Button
-                    type="submit"
-                    disabled={isAnalyzing || validationStatus !== 'valid'}
-                    className="w-full h-14 text-lg bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500"
-                    size="lg"
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                        Analizando con IA...
-                      </>
-                    ) : (
-                      <>
-                        <TrendingUp className="mr-2 h-6 w-6" />
-                        Generar Análisis
-                      </>
+                    {validationStatus === 'valid' && !isAnalyzing && !result && (
+                      <div className="flex items-center space-x-2 text-green-400">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="text-sm">Listo para analizar</span>
+                      </div>
                     )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={isAnalyzing || validationStatus !== 'valid'}
+                      className="w-full h-14 text-lg bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500"
+                      size="lg"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                          Analizando con IA...
+                        </>
+                      ) : (
+                        <>
+                          <TrendingUp className="mr-2 h-6 w-6" />
+                          Generar Análisis
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="lg:col-span-1">
