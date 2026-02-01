@@ -16,7 +16,7 @@ import { UsageBadge } from '../usage/UsageBadge';
 import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
 
 interface ProjectData {
-  type: 'residential' | 'commercial' | 'industrial' | 'infrastructure' | 'renovation';
+  type: 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto';
   location: string;
   area: number;
   estimatedBudget?: number;
@@ -24,14 +24,14 @@ interface ProjectData {
 }
 
 interface AnalysisConfig {
-  analysisDepth: 'basic' | 'standard' | 'detailed';
+  analysisDepth: 'quick' | 'standard' | 'deep';
   includeMarketData: boolean;
 }
 
 export default function TextBudgetAnalyzer() {
   const router = useRouter();
   const [formData, setFormData] = useState<ProjectData>({
-    type: 'residential',
+    type: 'residencial',
     location: '',
     area: 0,
     estimatedBudget: 0,
@@ -267,11 +267,11 @@ export default function TextBudgetAnalyzer() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="residential">Residencial</SelectItem>
-                          <SelectItem value="commercial">Comercial</SelectItem>
-                          <SelectItem value="industrial">Industrial</SelectItem>
-                          <SelectItem value="infrastructure">Infraestructura</SelectItem>
-                          <SelectItem value="renovation">Renovación</SelectItem>
+                          <SelectItem value="residencial">Residencial</SelectItem>
+                          <SelectItem value="comercial">Comercial</SelectItem>
+                          <SelectItem value="vial">Vial (Infraestructura)</SelectItem>
+                          <SelectItem value="edificacion">Edificación</SelectItem>
+                          <SelectItem value="auto">Auto-detectar</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -350,9 +350,9 @@ export default function TextBudgetAnalyzer() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="basic">Básico</SelectItem>
+                              <SelectItem value="quick">Básico (Rápido)</SelectItem>
                               <SelectItem value="standard">Estándar</SelectItem>
-                              <SelectItem value="detailed">Detallado</SelectItem>
+                              <SelectItem value="deep">Detallado (Profundo)</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
