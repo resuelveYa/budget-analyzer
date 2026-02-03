@@ -72,7 +72,14 @@ export async function middleware(request: NextRequest) {
     const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl'
     const loginUrl = new URL('/sign-in', landingUrl)
     loginUrl.searchParams.set('redirect_url', request.url)
-    return NextResponse.redirect(loginUrl)
+    const response = NextResponse.redirect(loginUrl)
+    // Pass existing cookies to avoid losing session during redirect
+    supabaseResponse.cookies.getAll().forEach(cookie => {
+      response.cookies.set(cookie.name, cookie.value, {
+        ...cookieConfig,
+      })
+    })
+    return response
   }
 
   return supabaseResponse
