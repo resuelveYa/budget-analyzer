@@ -93,12 +93,21 @@ export default function TextBudgetAnalyzer() {
       const response = await budgetAnalyzerApi.analyzeProject(formData, config);
       console.log('✅ Respuesta recibida:', response);
 
-      // ✅ GUARDAR con el ID correcto del backend
+      // ✅ GENERAR ID UNA SOLA VEZ y almacenarlo en la respuesta
       const analysisId = response.data?.analysis_id || response.analysis_id || `analysis_${Date.now()}`;
+      console.log('🔑 ID del análisis:', analysisId);
+
+      // Guardar con el ID correcto
       localStorage.setItem(analysisId, JSON.stringify(response));
       console.log('💾 Análisis guardado en localStorage con ID:', analysisId);
 
-      setResult(response);
+      // ✅ ALMACENAR el ID en la respuesta para usarlo después
+      const resultWithId = {
+        ...response,
+        _cachedAnalysisId: analysisId  // Guardar el ID calculado
+      };
+
+      setResult(resultWithId);
     } catch (err: any) {
       console.error('❌ Error en análisis:', err);
       setError(err.response?.data?.message || err.message || 'Error al generar el análisis');
@@ -109,8 +118,8 @@ export default function TextBudgetAnalyzer() {
 
   const handleViewFullAnalysis = () => {
     if (result) {
-      // ✅ Usar el mismo ID que guardamos en localStorage
-      const analysisId = result.data?.analysis_id || result.analysis_id || `analysis_${Date.now()}`;
+      // ✅ Usar el ID cacheado que ya calculamos al guardar
+      const analysisId = result._cachedAnalysisId || result.data?.analysis_id || result.analysis_id;
       console.log('🔗 Navegando a análisis con ID:', analysisId);
       router.push(`/analysis/${analysisId}`);
     }
