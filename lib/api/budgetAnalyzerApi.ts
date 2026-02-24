@@ -97,6 +97,14 @@ class BudgetAnalyzerApi {
       formData.append('analysisDepth', config.analysisDepth);
     }
 
+    // Add XLSX AI mapping data to pass it down to the API
+    // TypeScript will complain if it's not defined in PdfAnalysisConfig, 
+    // but we can safely access it as (config as any).xlsxMapping
+    const xlsxMapping = (config as any)?.xlsxMapping;
+    if (xlsxMapping) {
+      formData.append('xlsx_mapping', JSON.stringify(xlsxMapping));
+    }
+
     const response = await apiClient.post('/budget-analysis/project', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
