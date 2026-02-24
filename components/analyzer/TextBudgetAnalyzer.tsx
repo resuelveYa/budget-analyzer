@@ -16,7 +16,7 @@ import { UsageBadge } from '../usage/UsageBadge';
 import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
 
 interface ProjectData {
-  type: 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto';
+  type: 'vial_mop' | 'municipal' | 'general';
   location: string;
   area: number;
   estimatedBudget?: number;
@@ -31,7 +31,7 @@ interface AnalysisConfig {
 export default function TextBudgetAnalyzer() {
   const router = useRouter();
   const [formData, setFormData] = useState<ProjectData>({
-    type: 'residencial',
+    type: 'general',
     location: '',
     area: 0,
     estimatedBudget: 0,
@@ -47,7 +47,7 @@ export default function TextBudgetAnalyzer() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
-  const [activeTab, setActiveTab] = useState<'text' | 'pdf'>('pdf'); // Default to PDF mode
+  const [activeTab, setActiveTab] = useState<'text' | 'pdf'>('pdf'); // Default to file upload mode
   const [pdfResult, setPdfResult] = useState<any>(null);
 
 
@@ -223,7 +223,7 @@ export default function TextBudgetAnalyzer() {
                 }`}
             >
               <FileUp className="mr-2 h-5 w-5" />
-              Subir PDFs
+              Subir Archivos
             </button>
             <button
               onClick={() => setActiveTab('text')}
@@ -240,7 +240,7 @@ export default function TextBudgetAnalyzer() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* PDF Upload Mode */}
+            {/* File Upload Mode */}
             {activeTab === 'pdf' && (
               <PdfUploadZone
                 onAnalysisComplete={(analysisResult) => {
@@ -275,12 +275,10 @@ export default function TextBudgetAnalyzer() {
                         <SelectTrigger className="bg-white/10 border-white/20 text-white">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="residencial">Residencial</SelectItem>
-                          <SelectItem value="comercial">Comercial</SelectItem>
-                          <SelectItem value="vial">Vial (Infraestructura)</SelectItem>
-                          <SelectItem value="edificacion">Edificación</SelectItem>
-                          <SelectItem value="auto">Auto-detectar</SelectItem>
+                        <SelectContent className="bg-slate-800 text-white border-white/20">
+                          <SelectItem value="vial_mop">MOP (Vialidad)</SelectItem>
+                          <SelectItem value="municipal">Municipalidad</SelectItem>
+                          <SelectItem value="general">Proyecto General</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

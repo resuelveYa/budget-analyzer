@@ -42,6 +42,13 @@ export default function PdfProjectAnalysisView({ analysis: analysisProp }: PdfPr
     }).format(amount);
   };
 
+  const getPercentageColor = (pct: number) => {
+    if (pct < 1) return 'text-slate-400';
+    if (pct < 3) return 'text-sky-500 font-medium';
+    if (pct < 5) return 'text-amber-500 font-bold';
+    return 'text-rose-600 font-black';
+  };
+
   const extractBudget = () => {
     return analysis.presupuesto_estimado?.total_clp
       || analysis.resumen_consolidado?.total_con_iva
@@ -293,6 +300,7 @@ export default function PdfProjectAnalysisView({ analysis: analysisProp }: PdfPr
                         <th className="px-4 py-3 text-center">Unidad</th>
                         <th className="px-4 py-3 text-right">P. Unitario</th>
                         <th className="px-4 py-3 text-right">Total</th>
+                        <th className="px-4 py-3 text-right text-gray-400">%</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -304,6 +312,11 @@ export default function PdfProjectAnalysisView({ analysis: analysisProp }: PdfPr
                           <td className="px-4 py-3 text-center text-gray-500">{item.unidad || '-'}</td>
                           <td className="px-4 py-3 text-right">{formatCurrency(item.precio_unitario)}</td>
                           <td className="px-4 py-3 text-right font-semibold text-green-600">{formatCurrency(item.total)}</td>
+                          <td className={`px-4 py-3 text-right text-xs ${getPercentageColor(((item.total || 0) / (analysis.presupuesto_estimado?.neto_clp || 1)) * 100)}`}>
+                            {analysis.presupuesto_estimado?.neto_clp
+                              ? (((item.total || 0) / analysis.presupuesto_estimado.neto_clp) * 100).toFixed(1) + '%'
+                              : '-'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

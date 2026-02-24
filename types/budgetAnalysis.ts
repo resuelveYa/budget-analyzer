@@ -3,7 +3,7 @@
 export interface ProjectData {
   id?: string;
   name?: string;
-  type: 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto';
+  type: 'vial_mop' | 'municipal' | 'general';
   location: string;
   area: number;
   estimatedBudget?: number;
@@ -42,6 +42,27 @@ export interface RiskAnalysis {
   probabilidad: string;
   impacto: string;
   mitigacion: string;
+}
+
+export interface GeneralExpenseItem {
+  id: string;
+  descripcion: string;
+  unidad: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+}
+
+export interface GeneralExpenseCategory {
+  id: string;
+  nombre: string;
+  items: GeneralExpenseItem[];
+  subtotal: number;
+}
+
+export interface GeneralExpensesData {
+  categorias: GeneralExpenseCategory[];
+  total: number;
 }
 
 // ✅ NUEVA: Estructura de análisis parseado del JSON
@@ -180,7 +201,7 @@ export interface BudgetAnalysisFormData extends ProjectData {
 export interface PdfAnalysisConfig {
   analysisDepth?: 'quick' | 'standard' | 'deep';
   includeProviders?: boolean;
-  projectType?: 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto';
+  projectType?: 'vial_mop' | 'municipal' | 'general';
   projectLocation?: string;
   maxCostEstimate?: number;
   saveAnalysis?: boolean;
@@ -259,6 +280,7 @@ export interface PdfAnalysisResult {
       local_regulations: string;
       climate_impact: string;
     };
+    gastos_generales_data?: GeneralExpensesData;
     extraction_metadata?: any;
   };
   metadata: {
@@ -514,6 +536,7 @@ export interface BudgetAnalysis {
   recomendaciones?: string[];
   cronograma_sugerido?: string;
   contingencia_recomendada?: string;
+  gastos_generales_data?: GeneralExpensesData;
 
   // Metadatos del análisis
   metadata?: {

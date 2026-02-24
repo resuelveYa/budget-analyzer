@@ -8,16 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
+import { toast } from 'sonner';
 
 // Tipos de proyecto soportados
 const PROJECT_TYPES = [
-  { value: 'auto', label: '🔍 Auto-detectar', description: 'El sistema detecta el tipo automáticamente' },
-  { value: 'residencial', label: '🏠 Residencial', description: 'Casas, departamentos, condominios' },
-  { value: 'comercial', label: '🏢 Comercial/Industrial', description: 'Oficinas, galpones, locales comerciales' },
-  { value: 'vial', label: '🛣️ Infraestructura Vial', description: 'Caminos, puentes, conservación vial' },
-  { value: 'edificacion', label: '🏛️ Edificación Pública', description: 'Hospitales, colegios, edificios públicos' },
-  { value: 'sanitario', label: '💧 Obras Sanitarias', description: 'Agua potable, alcantarillado' },
-  { value: 'metalico', label: '🔩 Infraestructuras Metálicas', description: 'Estructuras de acero, galpones metálicos' },
+  { value: 'vial_mop', label: '🛣️ Obra vial MOP', description: 'Manual de Carreteras, puentes, conservación vial' },
+  { value: 'municipal', label: '🏛️ Municipalidad', description: 'Bacheo, mobiliario urbano, mantención comunal' },
+  { value: 'general', label: '📂 Proyecto General', description: 'Cualquier otro tipo de obra (análisis flexible)' },
 ] as const;
 
 type ProjectType = typeof PROJECT_TYPES[number]['value'];
@@ -34,7 +31,7 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
   const [uploadProgress, setUploadProgress] = useState(0);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [projectType, setProjectType] = useState<ProjectType>('auto');
+  const [projectType, setProjectType] = useState<ProjectType>('vial_mop');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -52,11 +49,14 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
     setIsDragging(false);
 
     const droppedFiles = Array.from(e.dataTransfer.files).filter(
-      file => file.type === 'application/pdf'
+      file => file.name.toLowerCase().endsWith('.pdf') ||
+        file.name.toLowerCase().endsWith('.xlsx') ||
+        file.name.toLowerCase().endsWith('.dwg') ||
+        file.name.toLowerCase().endsWith('.dxf')
     );
 
     if (droppedFiles.length === 0) {
-      setError('Solo se permiten archivos PDF');
+      setError('Solo se permiten archivos PDF, Excel y CAD (.dwg, .dxf)');
       return;
     }
 
@@ -68,7 +68,10 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
     if (!e.target.files) return;
 
     const selectedFiles = Array.from(e.target.files).filter(
-      file => file.type === 'application/pdf'
+      file => file.name.toLowerCase().endsWith('.pdf') ||
+        file.name.toLowerCase().endsWith('.xlsx') ||
+        file.name.toLowerCase().endsWith('.dwg') ||
+        file.name.toLowerCase().endsWith('.dxf')
     );
 
     setFiles(prev => [...prev, ...selectedFiles].slice(0, 10));
@@ -79,35 +82,127 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
     setFiles(prev => prev.filter((_, i) => i !== index));
   }, []);
 
+  const [logs, setLogs] = useState<{ type: string, message: string, file?: string }[]>([]);
+
   const handleAnalyze = async () => {
     if (files.length === 0) {
-      setError('Debes seleccionar al menos un archivo PDF');
+      setError('Debes seleccionar al menos un archivo (PDF, Excel o CAD)');
       return;
     }
 
     setIsUploading(true);
     setError(null);
     setUploadProgress(0);
+    setLogs([]);
+    setResult(null);
 
     try {
-      console.log('📄 Iniciando análisis de', files.length, 'PDFs');
-      setUploadProgress(20);
+      console.log('📄 Iniciando análisis de proyecto con streaming...');
 
-      const response = await budgetAnalyzerApi.analyzePdfProject(files, {
-        projectType: projectType,
-        analysisDepth: 'deep'
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
+      formData.append('projectType', projectType);
+
+      // Obtener token para la petición manual
+      let token = '';
+      try {
+        const { getAccessToken } = await import('@/lib/supabase/client');
+        token = await getAccessToken() || '';
+      } catch (e) {
+        console.error('Error obteniendo token para streaming:', e);
+      }
+
+      // Usar fetch directamente para manejar el stream (SSE/NDJSON)
+      // Corregir URL: quitar /api/ extra si process.env.NEXT_PUBLIC_API_URL ya lo tiene
+      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
+      const response = await fetch(`${baseUrl}/api/budget-analysis/project/stream`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: formData,
       });
 
-      setUploadProgress(100);
-      console.log('✅ Análisis completado:', response);
+      if (response.status === 401) {
+        toast.error('Sesión expirada. Redirigiendo al login...');
+        setTimeout(() => {
+          window.location.href = 'https://resuelveya.cl/sign-in';
+        }, 2000);
+        return;
+      }
 
-      setResult(response);
-      onAnalysisComplete?.(response);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error en el servidor: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No se pudo iniciar el lector de stream');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Procesar líneas completas del stream SSE (data: ...)
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Guardar remanente incompleto
+
+        for (const line of lines) {
+          // Soportar tanto NDJSON puro como SSE con prefijo "data: "
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          let jsonStr = trimmed;
+          if (trimmed.startsWith('data: ')) {
+            jsonStr = trimmed.slice(6).trim();
+          } else if (trimmed.startsWith(':')) {
+            // Comentario SSE (heartbeat del servidor, ignorar)
+            continue;
+          }
+          if (!jsonStr) continue;
+
+          try {
+            const event = JSON.parse(jsonStr);
+            console.log('📡 Evento de progreso:', event);
+
+            if (event.type === 'ping') {
+              // Heartbeat: mantener conexión activa, no mostrar en logs
+              setUploadProgress(prev => Math.min(prev + 1, 89));
+            } else if (event.type === 'error') {
+              setError(event.message);
+            } else if (event.type === 'data') {
+              // Resultado final recibido por stream
+              setResult(event);
+              onAnalysisComplete?.(event);
+            } else if (event.type === 'final_result') {
+              // Compatible con formato directo de Python si llegara así
+              const wrapped = { data: { analysis: event.data, analysis_id: `project_${Date.now()}` } };
+              setResult(wrapped);
+              onAnalysisComplete?.(wrapped);
+            } else {
+              // Agregar a la lista de logs
+              setLogs(prev => [...prev, event].slice(-20)); // Mantener últimos 20
+
+              // Actualizar progreso estimado según tipo de mensaje
+              if (event.type === 'step') setUploadProgress(prev => Math.min(prev + 10, 90));
+            }
+          } catch (e) {
+            console.warn('⚠️ Error parseando fragmento de stream:', line);
+          }
+        }
+      }
+
     } catch (err: any) {
-      console.error('❌ Error en análisis:', err);
-      setError(err.response?.data?.message || err.message || 'Error al analizar los archivos');
+      console.error('❌ Error en análisis streaming:', err);
+      setError(err.message || 'Error al analizar los archivos');
     } finally {
       setIsUploading(false);
+      setUploadProgress(100);
     }
   };
 
@@ -122,10 +217,10 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
       <CardHeader>
         <CardTitle className="text-white flex items-center">
           <Upload className="mr-2 h-5 w-5" />
-          Subir Documentos PDF
+          Subir Documentos (PDF/Excel/CAD)
         </CardTitle>
         <CardDescription className="text-blue-100">
-          Arrastra tus archivos o haz clic para seleccionar (máx. 10 archivos)
+          Arrastra tus archivos PDF, .xlsx, .dwg o .dxf (máx. 10 archivos)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -172,7 +267,7 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf"
+            accept=".pdf,.xlsx,.dwg,.dxf"
             multiple
             onChange={handleFileSelect}
             className="hidden"
@@ -180,7 +275,7 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
 
           <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-cyan-400' : 'text-blue-300'}`} />
           <p className="text-white font-medium mb-1">
-            {isDragging ? 'Suelta los archivos aquí' : 'Arrastra PDFs aquí'}
+            {isDragging ? 'Suelta los archivos aquí' : 'Arrastra archivos aquí'}
           </p>
           <p className="text-blue-200 text-sm">
             o haz clic para seleccionar archivos
@@ -229,18 +324,50 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
           </Alert>
         )}
 
-        {/* Upload Progress */}
+        {/* Upload Progress & Logs */}
         {isUploading && (
-          <div className="space-y-2">
-            <div className="bg-white/10 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-cyan-400 to-blue-500 h-full transition-all duration-500"
-                style={{ width: `${uploadProgress}%` }}
-              />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="bg-white/10 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-cyan-400 to-blue-500 h-full transition-all duration-500"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-blue-200 text-sm text-center">
+                Analizando documentos... esto puede tomar varios minutos
+              </p>
             </div>
-            <p className="text-blue-200 text-sm text-center">
-              Analizando documentos... esto puede tomar varios minutos
-            </p>
+
+            {/* Real-time Logs Terminal */}
+            <div className="bg-black/40 rounded-xl border border-white/10 p-4 font-mono text-xs overflow-hidden">
+              <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
+                <span className="text-blue-300 flex items-center">
+                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                  PROCESANDO...
+                </span>
+                <span className="text-white/40">v2.1.0-haiku</span>
+              </div>
+              <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-hide flex flex-col-reverse">
+                {logs.length === 0 ? (
+                  <p className="text-white/30 italic">Iniciando motor de análisis...</p>
+                ) : (
+                  [...logs].reverse().map((log, i) => (
+                    <div key={i} className="flex gap-2 animate-in fade-in slide-in-from-left-2">
+                      <span className={`${log.type === 'step' ? 'text-cyan-400' :
+                        log.type === 'ai_pass' ? 'text-purple-400' :
+                          log.type === 'success' ? 'text-green-400' :
+                            log.type === 'error' ? 'text-red-400' : 'text-blue-200'
+                        }`}>
+                        [{new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]
+                      </span>
+                      <span className="text-white/80">{log.message}</span>
+                      {log.file && <span className="text-white/30 text-[10px] truncate max-w-[100px]">({log.file})</span>}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -291,12 +418,11 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
                       analysis_id: analysisId,
                       analysis_type: 'pdf',
                       analysis: {
-                        // Campos principales
+                        ...rawAnalysis, // Pasar TODO el objeto original para no perder datos
+                        // Asegurar compatibilidad campos principales
                         resumen_ejecutivo: rawAnalysis?.resumen_ejecutivo
                           || rawAnalysis?.resumen_consolidado?.resumen_ejecutivo
                           || 'Análisis de múltiples documentos PDF completado.',
-                        resumen_consolidado: rawAnalysis?.resumen_consolidado,
-
                         presupuesto_estimado: {
                           total_clp: rawAnalysis?.presupuesto_estimado?.total_clp
                             || rawAnalysis?.resumen_consolidado?.total_con_iva
@@ -307,49 +433,13 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
                           iva_clp: rawAnalysis?.presupuesto_estimado?.iva_clp
                             || rawAnalysis?.resumen_consolidado?.iva
                             || 0
-                        },
-
-                        // Documentos analizados individualmente
-                        archivos: rawAnalysis?.archivos || [],
-                        archivos_analizados: rawAnalysis?.archivos || [],
-
-                        // ===== NUEVOS CAMPOS TÉCNICOS =====
-                        // Tramos de camino extraídos de tablas
-                        tramos_camino: rawAnalysis?.tramos_camino || [],
-
-                        // Cubicaciones (volúmenes, superficies, metros lineales)
-                        cubicaciones: rawAnalysis?.cubicaciones || [],
-
-                        // Items de presupuesto consolidados
-                        items_presupuesto: rawAnalysis?.items_presupuesto || [],
-
-                        // Normativas aplicables (vallas, señalización, seguridad)
-                        normativas_aplicables: rawAnalysis?.normativas_aplicables || {
-                          vallas_camineras: null,
-                          senalizacion: [],
-                          seguridad: []
-                        },
-
-                        // Especificaciones técnicas (perfiles tipo, materiales)
-                        especificaciones_tecnicas: rawAnalysis?.especificaciones_tecnicas || [],
-
-                        // Comunidades indígenas (participación ciudadana)
-                        comunidades_indigenas: rawAnalysis?.comunidades_indigenas || [],
-
-                        // Campos para compatibilidad con vista antigua
-                        analisis_riesgos: rawAnalysis?.analisis_riesgos || [],
-                        recomendaciones: rawAnalysis?.recomendaciones || [],
-                        factores_regionales: rawAnalysis?.factores_regionales || {},
-                        confidence_score: 75
+                        }
                       },
                       project_info: rawAnalysis?.project_info || {
                         name: rawAnalysis?.proyecto || 'Proyecto Consolidado',
-                        location: 'Ver documentos individuales',
+                        location: 'Chile',
                         type: 'Proyecto MOP',
-                        status: 'Análisis Consolidado',
-                        longitud_total_km: rawAnalysis?.project_info?.longitud_total_km || 0,
-                        total_tramos: rawAnalysis?.project_info?.total_tramos || 0,
-                        total_comunidades: rawAnalysis?.project_info?.total_comunidades || 0
+                        status: 'Análisis Consolidado'
                       },
                       files_count: result.data?.files_count || files.length,
                       processing_time_ms: result.data?.processing_time_ms
@@ -378,12 +468,12 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
           {isUploading ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Analizando PDFs...
+              Analizando archivos...
             </>
           ) : (
             <>
               <FileText className="mr-2 h-5 w-5" />
-              Analizar {files.length > 0 ? `${files.length} PDF(s)` : 'PDFs'}
+              Analizar {files.length > 0 ? `${files.length} archivo(s)` : 'Documentos'}
             </>
           )}
         </Button>

@@ -179,16 +179,24 @@ class BudgetAnalyzerApi {
   }
 
   /**
-   * Exportar análisis a PDF
+   * Exportar análisis (PDF o Excel)
    */
-  async exportToPdf(analysis: any, options: { margin?: number } = {}) {
+  async exportAnalysis(analysis: any, options: { margin?: number } = {}, format: 'pdf' | 'excel' | 'xlsx' = 'pdf') {
     const response = await apiClient.post('/budget-analysis/export', {
       analysis,
-      options
+      options,
+      format
     }, {
       responseType: 'blob'
     });
     return response.data;
+  }
+
+  /**
+   * @deprecated Usar exportAnalysis
+   */
+  async exportToPdf(analysis: any, options: { margin?: number } = {}) {
+    return this.exportAnalysis(analysis, options, 'pdf');
   }
 }
 

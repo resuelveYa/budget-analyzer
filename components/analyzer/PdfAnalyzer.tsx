@@ -32,7 +32,7 @@ export default function PdfAnalyzer() {
 
   const [config, setConfig] = useState({
     analysisDepth: 'standard' as 'quick' | 'standard' | 'deep',
-    projectType: 'auto' as 'residencial' | 'comercial' | 'vial' | 'edificacion' | 'sanitario' | 'metalico' | 'auto',
+    projectType: 'vial_mop' as 'vial_mop' | 'municipal' | 'general',
     projectLocation: 'Santiago, Chile',
     includeProviders: true,
   });
@@ -42,8 +42,11 @@ export default function PdfAnalyzer() {
     const maxSize = parseInt(process.env.NEXT_PUBLIC_MAX_FILE_SIZE || '10485760');
 
     Array.from(selectedFiles).forEach(file => {
-      if (file.type !== 'application/pdf') {
-        setError('Solo se permiten archivos PDF');
+      const allowedExtensions = ['.pdf', '.xlsx', '.dwg', '.dxf'];
+      const fileExt = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+
+      if (!allowedExtensions.includes(`.${fileExt}`)) {
+        setError('Solo se permiten archivos PDF, Excel o CAD (.dwg, .dxf)');
         return;
       }
       if (file.size > maxSize) {
@@ -93,7 +96,7 @@ export default function PdfAnalyzer() {
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
-      const response = await budgetAnalyzerApi.analyzePdfProject(files, config);
+      const response = await budgetAnalyzerApi.analyzePdfProject(files, config as any);
 
       console.log('✅ Respuesta recibida:', response);
       setResult(response.data?.analysis || response.data);
@@ -143,15 +146,15 @@ export default function PdfAnalyzer() {
                   }`}
               >
                 <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-lg font-medium mb-2">Arrastra tus PDFs aquí</p>
-                <p className="text-sm text-muted-foreground mb-6">Máximo 10 archivos (15MB c/u)</p>
+                <p className="text-lg font-medium mb-2">Arrastra tus archivos aquí</p>
+                <p className="text-sm text-muted-foreground mb-6">Soporta PDF, Excel y CAD (.dwg, .dxf)</p>
 
                 <Button variant="secondary" asChild disabled={isAnalyzing}>
                   <label className="cursor-pointer">
                     Seleccionar Archivos
                     <input
                       type="file"
-                      accept="application/pdf"
+                      accept=".pdf,.xlsx,.dwg,.dxf"
                       multiple
                       className="hidden"
                       onChange={(e) => {
@@ -222,6 +225,24 @@ export default function PdfAnalyzer() {
               </div>
 
               <div>
+                <label className="text-sm font-medium mb-2 block">Tipo de Proyecto</label>
+                <Select
+                  value={config.projectType}
+                  onValueChange={(v: any) => setConfig(p => ({ ...p, projectType: v }))}
+                  disabled={isAnalyzing}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vial_mop">🛣️ MOP (Vialidad)</SelectItem>
+                    <SelectItem value="municipal">🏛️ Municipalidad</SelectItem>
+                    <SelectItem value="general">📂 Proyecto General</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <label className="text-sm font-medium mb-2 block">Ubicación (Región)</label>
                 <div className="text-sm p-3 bg-muted/50 rounded-lg border text-muted-foreground">
                   {config.projectLocation} (Autodetectado)
@@ -266,7 +287,7 @@ export default function PdfAnalyzer() {
                 </div>
               </div>
               <p className="text-primary/60 italic">
-                Estamos usando OCR local y Claude 3.5 para analizar todos tus documentos...
+                Estamos usando OCR y análisis técnico para analizar todos tus documentos...
               </p>
             </Card>
           )}
