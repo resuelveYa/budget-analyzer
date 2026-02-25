@@ -11,7 +11,8 @@ export default async function AnalyzePage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('https://resuelveya.cl/sign-in');
+    const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl';
+    redirect(`${landingUrl}/sign-in`);
   }
 
   return <TextBudgetAnalyzer />;

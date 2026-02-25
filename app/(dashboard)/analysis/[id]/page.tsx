@@ -47,19 +47,10 @@ export default function AnalysisDetailPage() {
         }
       }
 
-      // ESTRATEGIA 2: Buscar en historial del backend
+      // ESTRATEGIA 2: Buscar en backend
       console.log('🔍 No encontrado en localStorage, buscando en backend...');
-      const response = await budgetAnalyzerApi.getHistory(100);
-
-      if (response?.success && response.data?.analyses) {
-        console.log('📋 Total de análisis en backend:', response.data.analyses.length);
-
-        // Buscar el análisis
-        const found = response.data.analyses.find(
-          (a: AnalysisHistoryItem) =>
-            String(a.analysis_id) === String(id) ||
-            String(a.id) === String(id)
-        );
+      try {
+        const found = await budgetAnalyzerApi.getById(id);
 
         if (found) {
           console.log('✅ Análisis encontrado en backend:', found);
@@ -103,15 +94,16 @@ export default function AnalysisDetailPage() {
             // Guardar en localStorage para futuros accesos
             localStorage.setItem(id, JSON.stringify(formattedData));
           } else {
-            // Si no tiene details completo, crear estructura básica
+            // Si no tiene details completo o is already well formulated
             const formattedData = {
-              data: {
+              data: found.data ? found.data : {
                 analysis: {
-                  resumen_ejecutivo: found.summary || 'Este análisis no tiene información detallada disponible.',
-                  presupuesto_estimado: {
+                  resumen_ejecutivo: found.summary || found.resumen_ejecutivo || 'Este análisis no tiene información detallada disponible.',
+                  presupuesto_estimado: found.presupuesto_estimado || {
                     total_clp: found.estimated_budget || 0
                   },
-                  confidence_score: found.confidence_score || 0
+                  confidence_score: found.confidence_score || found.metadata?.confidence_score || 0,
+                  ...found
                 },
                 project_info: {
                   location: found.location || 'No especificada',
@@ -128,15 +120,10 @@ export default function AnalysisDetailPage() {
             localStorage.setItem(id, JSON.stringify(formattedData));
           }
         } else {
-          console.error('❌ Análisis no encontrado. IDs disponibles:',
-            response.data.analyses.map((a: AnalysisHistoryItem) => ({
-              id: a.id,
-              analysis_id: a.analysis_id
-            }))
-          );
           setError('Análisis no encontrado en el historial');
         }
-      } else {
+      } catch (backendErr: any) {
+        console.error('❌ Error cargando análisis del servidor:', backendErr);
         setError('Error cargando análisis del servidor');
       }
 

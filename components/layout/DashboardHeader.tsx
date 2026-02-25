@@ -39,7 +39,8 @@ export function DashboardHeader() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('https://resuelveya.cl');
+    const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl';
+    router.push(landingUrl);
   };
 
   return (

@@ -297,6 +297,20 @@ export default function DynamicAnalysisView({ analysis: analysisProp }: DynamicA
     }
   };
 
+  const getProjectTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      vial_mop: 'Obra MOP',
+      municipal: 'Obra Municipalidad',
+      auto: 'Proyecto Identificado Automáticamente',
+      residencial: 'Obra Residencial',
+      comercial: 'Obra Comercial',
+      edificacion: 'Edificación',
+      sanitario: 'Obra Sanitaria',
+      metalico: 'Estructura Metálica'
+    };
+    return labels[type] || type;
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 space-y-6 animate-in fade-in duration-700">
       {/* Premium Header */}
@@ -316,7 +330,9 @@ export default function DynamicAnalysisView({ analysis: analysisProp }: DynamicA
 
             <div className="space-y-2">
               <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-                {analysis.proyecto?.nombre || projectInfo.name || 'Análisis de Licitación'}
+                {projectInfo.file_name && !projectInfo.file_name.includes('Consolidado') && !projectInfo.file_name.includes('Stream')
+                  ? projectInfo.file_name
+                  : (analysis.proyecto?.nombre || projectInfo.name || (projectInfo.type ? getProjectTypeLabel(projectInfo.type) : 'Análisis de Licitación'))}
               </h1>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold">
@@ -325,7 +341,7 @@ export default function DynamicAnalysisView({ analysis: analysisProp }: DynamicA
                 </div>
                 <div className="flex items-center px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
                   <Settings2 className="w-3 h-3 mr-1.5" />
-                  {projectInfo.type || 'Infraestructura'}
+                  {getProjectTypeLabel(projectInfo.type || 'Infraestructura')}
                 </div>
                 <div className="flex items-center px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-semibold">
                   <FileText className="w-3 h-3 mr-1.5" />

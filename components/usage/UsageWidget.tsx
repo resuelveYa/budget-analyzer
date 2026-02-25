@@ -84,8 +84,8 @@ export function UsageWidget() {
 
               {!isUnlimited && (
                 <>
-                  <Progress 
-                    value={Math.min(percentage, 100)} 
+                  <Progress
+                    value={Math.min(percentage, 100)}
                     className="h-2"
                   />
                   <div className="flex items-center justify-between text-xs text-gray-500">
@@ -127,8 +127,8 @@ export function UsageWidget() {
 
               {!isUnlimited && (
                 <>
-                  <Progress 
-                    value={Math.min(percentage, 100)} 
+                  <Progress
+                    value={Math.min(percentage, 100)}
                     className="h-2"
                   />
                   <div className="flex items-center justify-between text-xs text-gray-500">
@@ -149,7 +149,7 @@ export function UsageWidget() {
       {stats.tier === 'free' && (
         <div className="mt-6 pt-6 border-t border-gray-200">
           <a
-            href="https://resuelveya.cl#precios"
+            href={`${process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl'}#precios`}
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"

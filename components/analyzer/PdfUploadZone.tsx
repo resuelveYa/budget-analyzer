@@ -126,7 +126,8 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
       if (response.status === 401) {
         toast.error('Sesión expirada. Redirigiendo al login...');
         setTimeout(() => {
-          window.location.href = 'https://resuelveya.cl/sign-in';
+          const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'http://localhost:3000';
+          window.location.href = `${landingUrl}/sign-in`;
         }, 2000);
         return;
       }
