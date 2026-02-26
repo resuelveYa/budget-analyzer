@@ -64,7 +64,9 @@ export async function middleware(request: NextRequest) {
     }
 
     // If no user, redirect to landing's sign-in
-    if (!user && !request.nextUrl.pathname.startsWith('/api/public')) {
+    // (except /auth/callback, which handles the token handoff)
+    const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
+    if (!user && !isAuthCallback && !request.nextUrl.pathname.startsWith('/api/public')) {
       // Check if it's a fetch/RSC request to avoid CORS issues with redirects
       const isFetch = request.headers.get('accept')?.includes('text/x-component') ||
         request.headers.get('accept')?.includes('application/json') ||
