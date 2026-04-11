@@ -55,69 +55,53 @@ export default function AnalysisDetailPage() {
         if (found) {
           console.log('✅ Análisis encontrado en backend:', found);
 
-          // Si el análisis tiene toda la data en details, úsala
-          if (found.details && Object.keys(found.details).length > 0) {
-            const formattedData = {
+          // Normalización inteligente:
+          // Si el objeto ya tiene la estructura "data: { analysis: ... }", úsalo tal cual.
+          // Si tiene "details", envuélvelo mínimamente.
+          
+          let formattedData = found;
+
+          if (found.data?.analysis || found.data?.full_analysis) {
+            // Ya está formateado correctamente por el backend
+            formattedData = found;
+          } else if (found.details) {
+            // Formatear desde details
+            formattedData = {
+              ...found,
               data: {
-                analysis: {
-                  resumen_ejecutivo: found.summary || found.details.resumen_ejecutivo || 'No disponible',
-                  presupuesto_estimado: found.details.presupuesto_estimado || {
-                    total_clp: found.estimated_budget || 0
-                  },
-                  desglose_costos: found.details.desglose_costos || null,
-                  confidence_score: found.confidence_score || 0,
-                  analisis_riesgos: found.details.analisis_riesgos || [],
-                  recomendaciones: found.details.recomendaciones || [],
-                  factores_regionales: found.details.factores_regionales || {},
-                  materiales_detallados: found.details.materiales_detallados || [],
-                  mano_obra: found.details.mano_obra || [],
-                  equipos_maquinaria: found.details.equipos_maquinaria || [],
-                  proveedores_chile: found.details.proveedores_chile || [],
-                  cronograma_estimado: found.details.cronograma_estimado || '',
-                  contingencia_recomendada: found.details.contingencia_recomendada || '20%',
-                  ...found.details
-                },
+                analysis: found.details,
                 project_info: {
-                  location: found.location || 'No especificada',
-                  project_type: found.project_type || 'No especificado',
-                  file_name: found.file_name || 'Sin nombre',
-                  estimated_budget: found.estimated_budget || 0,
-                  area_m2: found.area_m2,
-                  type: found.project_type
-                },
-                analysis_id: found.analysis_id
+                  location: found.location,
+                  project_type: found.project_type,
+                  file_name: found.file_name,
+                  estimated_budget: found.estimated_budget
+                }
               }
             };
-
-            setAnalysisData(formattedData);
-
-            // Guardar en localStorage para futuros accesos
-            localStorage.setItem(id, JSON.stringify(formattedData));
           } else {
-            // Si no tiene details completo o is already well formulated
-            const formattedData = {
-              data: found.data ? found.data : {
-                analysis: {
-                  resumen_ejecutivo: found.summary || found.resumen_ejecutivo || 'Este análisis no tiene información detallada disponible.',
-                  presupuesto_estimado: found.presupuesto_estimado || {
-                    total_clp: found.estimated_budget || 0
-                  },
-                  confidence_score: found.confidence_score || found.metadata?.confidence_score || 0,
-                  ...found
-                },
+            // Fallback básico
+            formattedData = {
+              ...found,
+              data: found.data || {
+                analysis: found,
                 project_info: {
-                  location: found.location || 'No especificada',
-                  project_type: found.project_type || 'No especificado',
-                  file_name: found.file_name || 'Sin nombre',
-                  estimated_budget: found.estimated_budget || 0,
-                  area_m2: found.area_m2
-                },
-                analysis_id: found.analysis_id
+                  location: found.location,
+                  project_type: found.project_type,
+                  file_name: found.file_name,
+                  estimated_budget: found.estimated_budget
+                }
               }
             };
+          }
 
-            setAnalysisData(formattedData);
+          setAnalysisData(formattedData);
+          
+          // Intentar guardar en localStorage pero envolver en try-catch por el límite de 5MB (QuotaExceededError)
+          try {
             localStorage.setItem(id, JSON.stringify(formattedData));
+            console.log('💾 Análisis cacheado en localStorage');
+          } catch (e) {
+            console.warn('⚠️ No se pudo guardar en localStorage (cuota excedida o modo incógnito):', e);
           }
         } else {
           setError('Análisis no encontrado en el historial');

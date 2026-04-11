@@ -1,4 +1,4 @@
-name: Deploy Budget Analyzer to Production
+name: Deploy Budget Analyzer to Vercel
 
 on:
   push:
@@ -10,150 +10,16 @@ jobs:
   deploy:
     name: Deploy Budget App
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
         with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Build Next.js app
-        env:
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          NEXT_PUBLIC_CLERK_DOMAIN: resuelveya.cl
-          NEXT_PUBLIC_API_URL: https://resuelveya.cl/api
-          BACKEND_API_URL: https://resuelveya.cl/api
-        run: npm run build
-      
-      - name: Create deployment package
-        run: |
-          mkdir -p deploy/.next
-          cp -r .next/standalone/* deploy/
-          cp -r .next/static deploy/.next/static
-          cp -r public deploy/public 2>/dev/null || true
-          cp ecosystem.config.js deploy/ 2>/dev/null || echo "module.exports = {apps: [{name: 'saerti-budget', script: 'server.js', env: {PORT: 3002}}]}" > deploy/ecosystem.config.js
-          tar -czf budget-deploy.tar.gz -C deploy .
-      
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
-      
-      - name: Add server to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-      
-      - name: Deploy to VPS
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
-        run: |
-          echo "🔑 Adding server to known_hosts..."
-          mkdir -p ~/.ssh
-          ssh-keyscan -H $VPS_HOST >> ~/.ssh/known_hosts
-          
-          echo "📤 Uploading package..."
-          scp -o StrictHostKeyChecking=no budget-deploy.tar.gz $VPS_USERNAME@$VPS_HOST:/tmp/
-          
-          echo "🚀 Executing remote deployment script..."
-          ssh -o StrictHostKeyChecking=no $VPS_USERNAME@$VPS_HOST << 'ENDSSH'
-            set -e
-            
-            echo "📂 Moving to deployment directory..."
-            cd /var/www/budget-analyzer || { echo "❌ Directory not found"; exit 1; }
-            
-            # Backup
-            echo "💾 Creating backup..."
-            tar -czf ../budget-backup-$(date +%Y%m%d-%H%M%S).tar.gz . 2>/dev/null || true
-            
-            # Extract new version
-            echo "📦 Extracting new version..."
-            if [ -f /tmp/budget-deploy.tar.gz ]; then
-              tar -xzf /tmp/budget-deploy.tar.gz
-              rm /tmp/budget-deploy.tar.gz
-              echo "✅ Extraction complete."
-            else
-              echo "❌ Error: /tmp/budget-deploy.tar.gz not found!"
-              exit 1
-            fi
-            
-            # Repair assets (standing in standalone folder)
-            mkdir -p .next
-            cp -r .next/static .next/static 2>/dev/null || true
-            
-            # Update environment
-            echo "📝 Updating environment variables..."
-            cat > .env.production << 'ENVEOF'
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
-          NEXT_PUBLIC_CLERK_DOMAIN=resuelveya.cl
-          NEXT_PUBLIC_API_URL=https://resuelveya.cl/api
-          NODE_ENV=production
-          PORT=3002
-          ENVEOF
-            
-            # Restart
-            echo "🔄 Restarting service with PM2..."
-            pm2 restart saerti-budget || pm2 start ecosystem.config.js
-            pm2 save
-            
-            echo "✅ Deployment completed successfully!"
-          ENDSSH
-      
-      - name: Health Check
-        run: |
-          echo "🏥 Checking budget app..."
-          sleep 10
-          
-          for i in {1..5}; do
-            if curl -f https://resuelveya.cl/budget/; then
-              echo "✅ Budget app is healthy!"
-              exit 0
-            fi
-            echo "⏳ Attempt $i failed, retrying..."
-            sleep 5
-          done
-          
-          echo "❌ Health check failed"
-          exit 1
-      
-      - name: Rollback on failure
-        if: failure()
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
-        run: |
-          echo "🔙 Rolling back..."
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-          ssh $VPS_USERNAME@$VPS_HOST << 'ENDSSH'
-            cd /var/www/budget-analyzer
-            LATEST_BACKUP=$(ls -t ../budget-backup-*.tar.gz 2>/dev/null | head -1)
-            if [ -n "$LATEST_BACKUP" ]; then
-              echo "Restoring from $LATEST_BACKUP"
-              rm -rf *
-              tar -xzf "$LATEST_BACKUP"
-              pm2 restart saerti-budget
-              echo "✅ Rollback completed"
-            fi
-          ENDSSH
-      
-      - name: Cleanup old backups
-        if: success()
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
-        run: |
-          ssh $VPS_USERNAME@$VPS_HOST << 'ENDSSH'
-            cd /var/www
-            ls -t budget-backup-*.tar.gz 2>/dev/null | tail -n +4 | xargs rm -f
-          ENDSSH
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_BUDGET }}
+          vercel-args: '--prod'
+          working-directory: ./

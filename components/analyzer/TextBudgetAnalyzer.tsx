@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { apiClient } from '@/lib/api/client';
 import Logo from '../logo';
 import { UsageBadge } from '../usage/UsageBadge';
-import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
+import budgetAnalyzerApi, { type AnalysisContext } from '@/lib/api/budgetAnalyzerApi';
+import AnalysisContextPanel from '../AnalysisContextPanel';
 
 interface ProjectData {
   type: 'vial_mop' | 'municipal' | 'general';
@@ -49,6 +50,7 @@ export default function TextBudgetAnalyzer() {
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
   const [activeTab, setActiveTab] = useState<'text' | 'pdf'>('pdf'); // Default to file upload mode
   const [pdfResult, setPdfResult] = useState<any>(null);
+  const [analysisContext, setAnalysisContext] = useState<AnalysisContext>({});
 
 
   const validateForm = () => {
@@ -89,8 +91,8 @@ export default function TextBudgetAnalyzer() {
     setError(null);
 
     try {
-      console.log('🚀 Iniciando análisis con datos:', formData, config);
-      const response = await budgetAnalyzerApi.analyzeProject(formData, config);
+      console.log('🚀 Iniciando análisis con datos:', formData, config, analysisContext);
+      const response = await budgetAnalyzerApi.analyzeProject(formData, config, analysisContext);
       console.log('✅ Respuesta recibida:', response);
 
       // ✅ GENERAR ID UNA SOLA VEZ y almacenarlo en la respuesta
@@ -98,8 +100,12 @@ export default function TextBudgetAnalyzer() {
       console.log('🔑 ID del análisis:', analysisId);
 
       // Guardar con el ID correcto
-      localStorage.setItem(analysisId, JSON.stringify(response));
-      console.log('💾 Análisis guardado en localStorage con ID:', analysisId);
+      try {
+        localStorage.setItem(analysisId, JSON.stringify(response));
+      } catch (e) {
+        console.warn('⚠️ No se pudo guardar el análisis en localStorage (Límite excedido)', e);
+      }
+      console.log('💾 Análisis guardado en localStorage (o ignorado si excedió cuota) con ID:', analysisId);
 
       // ✅ ALMACENAR el ID en la respuesta para usarlo después
       const resultWithId = {
@@ -377,6 +383,9 @@ export default function TextBudgetAnalyzer() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Context Panel */}
+                    <AnalysisContextPanel onChange={setAnalysisContext} />
 
                     {validationStatus === 'valid' && !isAnalyzing && !result && (
                       <div className="flex items-center space-x-2 text-green-400">

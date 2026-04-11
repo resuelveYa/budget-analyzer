@@ -267,8 +267,19 @@ export default function HistoryPage() {
                   )}
 
                   {analysis.estimated_budget && analysis.estimated_budget > 0 && (
-                    <div className="text-lg font-bold text-primary">
-                      {formatCurrency(analysis.estimated_budget)}
+                    <div className="mt-2 space-y-1 max-w-[300px]">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground font-medium">Neto (CD):</span>
+                        <span className="font-semibold">{formatCurrency(analysis.estimated_budget)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground font-medium">IVA (19%):</span>
+                        <span className="font-semibold">{formatCurrency(analysis.estimated_budget * 0.19)}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1 mt-2 border-t border-slate-100">
+                        <span className="font-bold text-base text-slate-700">Total:</span>
+                        <span className="text-lg font-bold text-primary">{formatCurrency(analysis.estimated_budget * 1.19)}</span>
+                      </div>
                     </div>
                   )}
                 </div>

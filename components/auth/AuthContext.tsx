@@ -24,6 +24,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const isLocal = 
+      !process.env.NEXT_PUBLIC_SUPABASE_URL || 
+      process.env.NEXT_PUBLIC_SUPABASE_URL === 'undefined' ||
+      (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ||
+      process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+    
+    if (isLocal) {
+      console.log('🛡️ AuthContext: Local Bypass Active');
+      // Helper to get cookie
+      const getLocalToken = () => {
+        return document.cookie.split('; ').find(row => row.startsWith('sb-local-token='))?.split('=')[1];
+      };
+
+      const token = getLocalToken();
+      if (token === 'local-admin-bypass-token') {
+        const mockUser = {
+          id: 'local-admin-id',
+          email: 'admin@saer.cl',
+          user_metadata: { full_name: 'Administrador Local' },
+          app_metadata: {},
+          aud: 'authenticated',
+          created_at: new Date().toISOString()
+        } as any;
+        
+        setUser(mockUser);
+        setSession({ user: mockUser, access_token: 'local-admin-bypass-token' } as any);
+      } else {
+        setUser(null);
+        setSession(null);
+      }
+      setIsLoading(false);
+      return;
+    }
+
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setSession(session);

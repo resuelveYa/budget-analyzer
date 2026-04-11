@@ -12,6 +12,8 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiClient } from '@/lib/api/client';
 import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
+import type { AnalysisContext } from '@/lib/api/budgetAnalyzerApi';
+import AnalysisContextPanel from '../AnalysisContextPanel';
 
 interface PdfAnalysisProgress {
   stage: 'uploading' | 'extracting' | 'analyzing' | 'complete';
@@ -36,6 +38,7 @@ export default function PdfAnalyzer() {
     projectLocation: 'Santiago, Chile',
     includeProviders: true,
   });
+  const [analysisContext, setAnalysisContext] = useState<AnalysisContext>({});
 
   const handleFileSelect = useCallback((selectedFiles: FileList | File[]) => {
     const newFiles: File[] = [];
@@ -96,7 +99,7 @@ export default function PdfAnalyzer() {
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
-      const response = await budgetAnalyzerApi.analyzePdfProject(files, config as any);
+      const response = await budgetAnalyzerApi.analyzePdfProject(files, config as any, analysisContext);
 
       console.log('✅ Respuesta recibida:', response);
       setResult(response.data?.analysis || response.data);
@@ -247,6 +250,11 @@ export default function PdfAnalyzer() {
                 <div className="text-sm p-3 bg-muted/50 rounded-lg border text-muted-foreground">
                   {config.projectLocation} (Autodetectado)
                 </div>
+              </div>
+
+              {/* Context Panel */}
+              <div className="pt-2">
+                <AnalysisContextPanel onChange={setAnalysisContext} />
               </div>
             </CardContent>
           </Card>

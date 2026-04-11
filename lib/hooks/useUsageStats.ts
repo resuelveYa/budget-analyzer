@@ -39,7 +39,7 @@ export function useUsageStats() {
     if (!authLoading && user) {
       fetchStats();
       // Refrescar cada 30 segundos
-      const interval = setInterval(fetchStats, 30000);
+      const interval = setInterval(fetchStats, 60000);
       return () => clearInterval(interval);
     } else if (!authLoading && !user) {
       setLoading(false);

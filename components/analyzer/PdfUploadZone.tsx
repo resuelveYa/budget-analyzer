@@ -7,8 +7,9 @@ import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle, ArrowRight, Bui
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import budgetAnalyzerApi from '@/lib/api/budgetAnalyzerApi';
+import budgetAnalyzerApi, { type AnalysisContext } from '@/lib/api/budgetAnalyzerApi';
 import { toast } from 'sonner';
+import AnalysisContextPanel from '../AnalysisContextPanel';
 
 // Tipos de proyecto soportados
 const PROJECT_TYPES = [
@@ -32,6 +33,7 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [projectType, setProjectType] = useState<ProjectType>('vial_mop');
+  const [analysisContext, setAnalysisContext] = useState<AnalysisContext>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -96,15 +98,24 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
     setLogs([]);
     setResult(null);
 
+    // Variables en scope de función para que el fallback polling las pueda acceder
+    let token = '';
+    let baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api/backend';
+    let streamAnalysisId: string | null = null;
+    let receivedFinalResult = false;
+
     try {
       console.log('📄 Iniciando análisis de proyecto con streaming...');
 
       const formData = new FormData();
       files.forEach(file => formData.append('files', file));
       formData.append('projectType', projectType);
+      
+      if (analysisContext && Object.keys(analysisContext).length > 0) {
+        formData.append('analysis_context', JSON.stringify(analysisContext));
+      }
 
       // Obtener token para la petición manual
-      let token = '';
       try {
         const { getAccessToken } = await import('@/lib/supabase/client');
         token = await getAccessToken() || '';
@@ -113,9 +124,8 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
       }
 
       // Usar fetch directamente para manejar el stream (SSE/NDJSON)
-      // Corregir URL: quitar /api/ extra si process.env.NEXT_PUBLIC_API_URL ya lo tiene
-      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
-      const response = await fetch(`${baseUrl}/api/budget-analysis/project/stream`, {
+      // (baseUrl ya declarado arriba en scope de función)
+      const response = await fetch(`${baseUrl}/budget-analysis/project/stream`, {
         method: 'POST',
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
@@ -142,6 +152,7 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
 
       const decoder = new TextDecoder();
       let buffer = '';
+      // (streamAnalysisId y receivedFinalResult ya declarados en scope de función)      
 
       while (true) {
         const { done, value } = await reader.read();
@@ -169,8 +180,6 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
 
           try {
             const event = JSON.parse(jsonStr);
-            console.log('📡 Evento de progreso:', event);
-
             if (event.type === 'ping') {
               // Heartbeat: mantener conexión activa, no mostrar en logs
               setUploadProgress(prev => Math.min(prev + 1, 89));
@@ -178,14 +187,21 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
               setError(event.message);
             } else if (event.type === 'data') {
               // Resultado final recibido por stream
+              receivedFinalResult = true;
               setResult(event);
               onAnalysisComplete?.(event);
             } else if (event.type === 'final_result') {
               // Compatible con formato directo de Python si llegara así
+              receivedFinalResult = true;
               const wrapped = { data: { analysis: event.data, analysis_id: `project_${Date.now()}` } };
               setResult(wrapped);
               onAnalysisComplete?.(wrapped);
             } else {
+              // Capturar analysisId del primer evento 'info' para polling de fallback
+              if (event.type === 'info' && event.analysis_id && !streamAnalysisId) {
+                streamAnalysisId = event.analysis_id;
+                console.log('🔑 [STREAM] analysisId capturado:', streamAnalysisId);
+              }
               // Agregar a la lista de logs
               setLogs(prev => [...prev, event].slice(-20)); // Mantener últimos 20
 
@@ -204,6 +220,40 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
     } finally {
       setIsUploading(false);
       setUploadProgress(100);
+    }
+
+    // ── FALLBACK POLLING: Si el stream se cortó (ECONNRESET/proxy timeout) y hubo analysisId ──
+    // El microservicio sigue procesando y guarda el resultado en BD aunque se corte el stream.
+    // Esperamos hasta 5 minutos haciendo polling cada 10s.
+    if (!receivedFinalResult && streamAnalysisId) {
+      console.warn('⚠️ [FALLBACK] Stream cerrado sin resultado final. Iniciando polling por:', streamAnalysisId);
+      setLogs(prev => [...prev, { type: 'info', message: '⏳ El análisis sigue procesando en segundo plano...' }]);
+
+      const MAX_POLL_ATTEMPTS = 30; // 30 × 10s = 5 minutos
+      const POLL_INTERVAL_MS = 10_000;
+
+      for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+        await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+        try {
+          const pollRes = await fetch(`${baseUrl}/budget-analysis/pdf/${streamAnalysisId}`, {
+            headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+          });
+          if (pollRes.ok) {
+            const pollData = await pollRes.json();
+            if (pollData?.success && pollData?.data) {
+              console.log('✅ [FALLBACK] Resultado obtenido por polling:', streamAnalysisId);
+              const wrapped = { data: { analysis_id: streamAnalysisId, ...pollData.data } };
+              setResult(wrapped);
+              onAnalysisComplete?.(wrapped);
+              setIsUploading(false);
+              setUploadProgress(100);
+              break;
+            }
+          }
+        } catch (e) {
+          console.warn(`⚠️ [FALLBACK] Intento ${attempt + 1} fallido, reintentando...`);
+        }
+      }
     }
   };
 
@@ -448,7 +498,11 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
                   };
 
                   console.log('💾 Guardando análisis transformado:', transformedData);
-                  localStorage.setItem(analysisId, JSON.stringify(transformedData));
+                  try {
+                    localStorage.setItem(analysisId, JSON.stringify(transformedData));
+                  } catch (e) {
+                    console.warn('⚠️ No se pudo guardar el análisis en localStorage (Límite excedido)', e);
+                  }
                   router.push(`/analysis/${analysisId}`);
                 }
               }}
@@ -459,6 +513,11 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
             </Button>
           </div>
         )}
+
+        {/* Context Panel */}
+        <div className="pt-2">
+          <AnalysisContextPanel onChange={setAnalysisContext} />
+        </div>
 
         {/* Analyze Button */}
         <Button

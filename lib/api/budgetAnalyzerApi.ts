@@ -10,6 +10,23 @@ import type { HistoryResponse } from '@/types/budgetAnalysis';
 import type { PdfAnalysisConfig } from '@/types/budgetAnalysis';
 import type { PdfAnalysisResult } from '@/types/budgetAnalysis';
 
+export interface CompanyProfile {
+  fortalezas: string;
+  debilidades: string;
+  ubicacion_oficinas: string;
+  num_vehiculos: number;
+  experiencia_anos: number;
+  especialidades: string[];
+  notas_adicionales: string;
+  updated_at?: string;
+}
+
+export interface AnalysisContext {
+  ventaja_competitiva?: string;
+  notas_proyecto?: string;
+  proyectos_similares?: boolean;
+}
+
 /**
  * API específica para Budget Analyzer
  * ✅ ÚNICA FUENTE DE VERDAD para análisis de presupuestos
@@ -18,14 +35,15 @@ class BudgetAnalyzerApi {
   /**
    * Análisis rápido de proyecto (sin PDF)
    */
-  async analyzeProject(projectData: ProjectData, config: AnalysisConfig) {
+  async analyzeProject(projectData: ProjectData, config: AnalysisConfig, analysisContext?: AnalysisContext) {
     console.log('📊 Enviando análisis rápido:', projectData);
     const response = await apiClient.post('/budget-analysis/quick', {
       ...projectData,
       analysisDepth: config.analysisDepth,
       includeMarketRates: config.includeMarketData,
-      includeProviders: config.includeProviders ?? true, // ✅ Ahora funciona
-      saveAnalysis: true
+      includeProviders: config.includeProviders ?? true,
+      saveAnalysis: true,
+      ...(analysisContext ? { analysis_context: analysisContext } : {})
     }, {
       timeout: 180000, // 3 minutos
     });
@@ -37,7 +55,8 @@ class BudgetAnalyzerApi {
    */
   async analyzePdf(
     fileOrFormData: File | FormData,
-    options?: PdfAnalysisConfig
+    options?: PdfAnalysisConfig,
+    analysisContext?: AnalysisContext
   ): Promise<any> {
     let formData: FormData;
 
@@ -63,6 +82,11 @@ class BudgetAnalyzerApi {
       }
     }
 
+    // Append analysis context if provided
+    if (analysisContext) {
+      formData.append('analysis_context', JSON.stringify(analysisContext));
+    }
+
     const response = await apiClient.post('/budget-analysis/pdf', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -80,7 +104,8 @@ class BudgetAnalyzerApi {
    */
   async analyzePdfProject(
     files: File[],
-    config?: PdfAnalysisConfig
+    config?: PdfAnalysisConfig,
+    analysisContext?: AnalysisContext
   ): Promise<any> {
     const formData = new FormData();
 
@@ -88,7 +113,6 @@ class BudgetAnalyzerApi {
       formData.append('files', file);
     });
 
-    // Project type for intelligent analysis
     if (config?.projectType) {
       formData.append('projectType', config.projectType);
     }
@@ -97,19 +121,20 @@ class BudgetAnalyzerApi {
       formData.append('analysisDepth', config.analysisDepth);
     }
 
-    // Add XLSX AI mapping data to pass it down to the API
-    // TypeScript will complain if it's not defined in PdfAnalysisConfig, 
-    // but we can safely access it as (config as any).xlsxMapping
     const xlsxMapping = (config as any)?.xlsxMapping;
     if (xlsxMapping) {
       formData.append('xlsx_mapping', JSON.stringify(xlsxMapping));
+    }
+
+    if (analysisContext && Object.keys(analysisContext).length > 0) {
+      formData.append('analysis_context', JSON.stringify(analysisContext));
     }
 
     const response = await apiClient.post('/budget-analysis/project', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 1800000, // 30 minutos para proyectos complejos (Multi-Pass Deep Analysis)
+      timeout: 1800000, // 30 minutos para proyectos complejos
     });
 
     return response.data;
@@ -133,6 +158,30 @@ class BudgetAnalyzerApi {
     });
     console.log('✅ Historial recibido:', response.data);
     return response.data;
+  }
+
+  /**
+   * Actualiza un análisis existente (APU, gastos generales, etc.)
+   */
+  async updateAnalysis(analysisId: string, updatedData: Record<string, any>): Promise<any> {
+    const response = await apiClient.patch(`/budget-analysis/${analysisId}`, updatedData);
+    return response.data;
+  }
+
+  /**
+   * Obtiene el perfil de empresa del usuario actual
+   */
+  async getCompanyProfile(): Promise<CompanyProfile | null> {
+    const response = await apiClient.get('/users/me/company-profile');
+    return response.data.data;
+  }
+
+  /**
+   * Guarda el perfil de empresa del usuario actual
+   */
+  async saveCompanyProfile(profile: Omit<CompanyProfile, 'updated_at'>): Promise<CompanyProfile> {
+    const response = await apiClient.put('/users/me/company-profile', profile);
+    return response.data.data;
   }
 
   /**
