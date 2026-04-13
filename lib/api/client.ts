@@ -74,7 +74,7 @@ class ApiClient {
             getAccessToken().then(token => {
               if (!token) {
                 console.error('🚫 Sesión inválida o expirada, redirigiendo a login...');
-                const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl';
+                const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://licitex.cl';
                 window.location.href = `${landingUrl}/sign-in`;
               } else {
                 console.warn('🤔 401 recibido pero hay un token presente. Posible error de permisos o token expirado en el servidor.');

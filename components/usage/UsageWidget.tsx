@@ -149,7 +149,7 @@ export function UsageWidget() {
       {stats.tier === 'free' && (
         <div className="mt-6 pt-6 border-t border-gray-200">
           <a
-            href={`${process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl'}#precios`}
+            href={`${process.env.NEXT_PUBLIC_LANDING_URL || 'https://licitex.cl'}#precios`}
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"

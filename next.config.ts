@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  // basePath: '/budget', // 👈 Eliminado: ahora está en la raíz del subdominio budget.resuelveya.cl
+  // basePath: '/budget', // 👈 Eliminado: ahora está en la raíz del subdominio budget.licitex.cl
   async rewrites() {
     return [
       {

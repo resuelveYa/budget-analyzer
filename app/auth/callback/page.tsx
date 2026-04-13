@@ -44,7 +44,7 @@ export default function AuthCallbackPage() {
             if (error) {
               console.error('[auth/callback] Error setting session:', error.message)
               // Redirigir al login de landing con el redirect_url original
-              const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl'
+              const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://licitex.cl'
               window.location.href = `${landingUrl}/sign-in?redirect_url=${encodeURIComponent(window.location.origin + next)}`
               return
             }
@@ -58,7 +58,7 @@ export default function AuthCallbackPage() {
       }
 
       // Sin tokens en el hash → redirigir al login
-      const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl'
+      const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://licitex.cl'
       window.location.href = `${landingUrl}/sign-in?redirect_url=${encodeURIComponent(window.location.origin + next)}`
     }
 

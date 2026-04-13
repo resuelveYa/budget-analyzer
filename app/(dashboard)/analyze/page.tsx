@@ -11,7 +11,7 @@ export default async function AnalyzePage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://resuelveya.cl';
+    const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://licitex.cl';
     redirect(`${landingUrl}/sign-in`);
   }
 
