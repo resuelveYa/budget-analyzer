@@ -40,6 +40,8 @@ export default function CompanyProfileForm({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<{
+    razon_social: string;
+    rut_empresa: string;
     fortalezas: string;
     debilidades: string;
     ubicacion_oficinas: string;
@@ -48,6 +50,8 @@ export default function CompanyProfileForm({
     especialidades: string[];
     notas_adicionales: string;
   }>({
+    razon_social: '',
+    rut_empresa: '',
     fortalezas: '',
     debilidades: '',
     ubicacion_oficinas: '',
@@ -64,6 +68,8 @@ export default function CompanyProfileForm({
         const profile = await budgetAnalyzerApi.getCompanyProfile();
         if (profile) {
           setForm({
+            razon_social: profile.razon_social ?? '',
+            rut_empresa: profile.rut_empresa ?? '',
             fortalezas: profile.fortalezas ?? '',
             debilidades: profile.debilidades ?? '',
             ubicacion_oficinas: profile.ubicacion_oficinas ?? '',
@@ -102,6 +108,10 @@ export default function CompanyProfileForm({
   };
 
   const handleSave = useCallback(async () => {
+    if (!form.razon_social.trim()) {
+      toast.error('La Razón Social o Nombre de la empresa es obligatoria');
+      return;
+    }
     if (!form.fortalezas.trim() || !form.ubicacion_oficinas.trim()) {
       toast.error('Fortalezas y ubicación de oficinas son obligatorias');
       return;
@@ -110,6 +120,8 @@ export default function CompanyProfileForm({
     try {
       setSaving(true);
       const saved = await budgetAnalyzerApi.saveCompanyProfile({
+        razon_social: form.razon_social,
+        rut_empresa: form.rut_empresa,
         fortalezas: form.fortalezas,
         debilidades: form.debilidades,
         ubicacion_oficinas: form.ubicacion_oficinas,
@@ -173,6 +185,35 @@ export default function CompanyProfileForm({
         </div>
 
         <div className="p-6 space-y-5">
+
+          {/* Razón Social y RUT */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <label className="flex items-center gap-2 text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
+                Razón Social / Nombre Empresa
+                <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.razon_social}
+                onChange={e => setForm(p => ({ ...p, razon_social: e.target.value }))}
+                placeholder="Ej: Constructora Austral de Chile Ltda."
+                className="w-full text-sm rounded-xl border border-slate-200 p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 text-slate-800 placeholder:text-slate-300 font-medium"
+              />
+            </div>
+            <div>
+              <label className="flex items-center gap-2 text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
+                RUT Empresa
+              </label>
+              <input
+                type="text"
+                value={form.rut_empresa}
+                onChange={e => setForm(p => ({ ...p, rut_empresa: e.target.value }))}
+                placeholder="Ej: 77.892.410-5"
+                className="w-full text-sm rounded-xl border border-slate-200 p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 text-slate-800 placeholder:text-slate-300 font-medium"
+              />
+            </div>
+          </div>
 
           {/* Fortalezas */}
           <div>

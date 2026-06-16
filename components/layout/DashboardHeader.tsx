@@ -2,17 +2,18 @@
 
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { LogOut, FileText, History, BarChart3 } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import Logo from '@/components/logo';
 import { UsageHeaderIndicator } from '@/components/usage/UsageHeaderIndicator';
 import { useState, useEffect, useRef } from 'react';
+import { useSidebar } from './SidebarContext';
 
 export function DashboardHeader() {
   const router = useRouter();
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
+  const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -43,36 +44,36 @@ export function DashboardHeader() {
     router.push(landingUrl);
   };
 
-  return (
-    <header className={`bg-white border-b sticky top-0 z-[100] transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full border-none'}`}>
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-14">
-          <div className="flex items-center space-x-6">
-            <Logo size="sm" showText href="/" />
+  const handleToggle = () => {
+    if (window.innerWidth >= 1024) {
+      toggleSidebar();
+    } else {
+      toggleMobileSidebar();
+    }
+  };
 
-            <nav className="hidden md:flex space-x-5">
-              <Link
-                href="/analyze"
-                className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition text-sm font-medium"
-              >
-                <FileText className="w-4 h-4" />
-                <span>Analizar</span>
-              </Link>
-              <Link
-                href="/history"
-                className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition text-sm font-medium"
-              >
-                <History className="w-4 h-4" />
-                <span>Historial</span>
-              </Link>
-              <Link
-                href="/stats"
-                className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition text-sm font-medium"
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span>Estadísticas</span>
-              </Link>
-            </nav>
+  return (
+    <header className={`bg-white border-b sticky top-0 z-40 transition-transform duration-300 h-14 flex items-center ${isVisible ? 'translate-y-0' : '-translate-y-full border-none'}`}>
+      <div className="w-full px-4">
+        <div className="flex items-center justify-between h-14">
+          <div className="flex items-center space-x-4">
+            {/* Hamburger Toggle Button */}
+            <button
+              onClick={handleToggle}
+              className="flex items-center justify-center w-9 h-9 text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition focus:outline-none"
+              aria-label="Toggle Sidebar"
+            >
+              {isMobileOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
+
+            {/* Logo - only visible on mobile/tablet */}
+            <div className="lg:hidden">
+              <Logo size="sm" showText={true} href="/" />
+            </div>
           </div>
 
           <div className="flex items-center space-x-3">

@@ -454,7 +454,7 @@ export default function FullAnalysisView({ analysis: analysisProp, isConsolidate
                   analysis.analisis_riesgos.map((riesgo: any, idx: number) => (
                     <div key={idx} className="border-l-4 border-yellow-400 bg-yellow-50 p-4 rounded-r-lg">
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold">{riesgo.factor || riesgo.riesgo}</h4>
+                        <h4 className="font-semibold">{riesgo.factor || riesgo.riesgo || riesgo.descripcion || riesgo.descripción || riesgo.nombre}</h4>
                         <div className="flex gap-2">
                           <span className={`px-2 py-1 text-xs rounded-full ${riesgo.probability === 'alta' || riesgo.probabilidad === 'alta' ? 'bg-red-100 text-red-700' :
                             riesgo.probability === 'media' || riesgo.probabilidad === 'media' ? 'bg-yellow-100 text-yellow-700' :

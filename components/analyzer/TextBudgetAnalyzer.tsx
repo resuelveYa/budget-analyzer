@@ -32,7 +32,7 @@ interface AnalysisConfig {
 export default function TextBudgetAnalyzer() {
   const router = useRouter();
   const [formData, setFormData] = useState<ProjectData>({
-    type: 'general',
+    type: 'municipal',
     location: '',
     area: 0,
     estimatedBudget: 0,
@@ -282,8 +282,8 @@ export default function TextBudgetAnalyzer() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-slate-800 text-white border-white/20">
-                          <SelectItem value="vial_mop">MOP (Vialidad)</SelectItem>
                           <SelectItem value="municipal">Municipalidad</SelectItem>
+                          <SelectItem value="vial_mop">MOP (Vialidad)</SelectItem>
                           <SelectItem value="general">Proyecto General</SelectItem>
                         </SelectContent>
                       </Select>

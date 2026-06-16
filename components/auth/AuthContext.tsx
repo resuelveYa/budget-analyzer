@@ -24,36 +24,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const isLocal = 
-      !process.env.NEXT_PUBLIC_SUPABASE_URL || 
-      process.env.NEXT_PUBLIC_SUPABASE_URL === 'undefined' ||
-      (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ||
-      process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+    const isLocal = process.env.NEXT_PUBLIC_DEV_BYPASS === 'true' || 
+                    (typeof window !== 'undefined' && 
+                      (window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' || 
+                       window.location.hostname.startsWith('192.168.')));
     
     if (isLocal) {
-      console.log('🛡️ AuthContext: Local Bypass Active');
-      // Helper to get cookie
-      const getLocalToken = () => {
-        return document.cookie.split('; ').find(row => row.startsWith('sb-local-token='))?.split('=')[1];
-      };
-
-      const token = getLocalToken();
-      if (token === 'local-admin-bypass-token') {
-        const mockUser = {
-          id: 'local-admin-id',
-          email: 'admin@saer.cl',
-          user_metadata: { full_name: 'Administrador Local' },
-          app_metadata: {},
-          aud: 'authenticated',
-          created_at: new Date().toISOString()
-        } as any;
-        
-        setUser(mockUser);
-        setSession({ user: mockUser, access_token: 'local-admin-bypass-token' } as any);
-      } else {
-        setUser(null);
-        setSession(null);
-      }
+      const mockUser = {
+        id: 'dev-local',
+        email: 'dev@licitex.cl',
+        user_metadata: { full_name: 'Dev Local' },
+        app_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString()
+      } as any;
+      setUser(mockUser);
+      setSession({ user: mockUser, access_token: 'local-admin-bypass-token' } as any);
       setIsLoading(false);
       return;
     }
@@ -67,10 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
+      (event: AuthChangeEvent, session: Session | null) => {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+
+        if (event === 'SIGNED_OUT') {
+          const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'https://licitex.cl'
+          window.location.href = `${landingUrl}/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`
+        }
       }
     );
 

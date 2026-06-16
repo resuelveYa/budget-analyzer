@@ -23,7 +23,7 @@ export interface CashFlowMetrics {
 
 export interface UsageStats<T = BudgetAnalyzerMetrics | CashFlowMetrics> {
   service: 'budget-analyzer' | 'cash-flow';
-  tier: 'free' | 'pro' | 'starter' | 'professional' | 'enterprise';
+  tier: 'free' | 'starter' | 'pro' | 'business' | 'professional' | 'enterprise';
   features: string[];
   restrictions?: Record<string, any>;
   metrics: T;

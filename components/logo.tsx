@@ -44,7 +44,7 @@ export default function Logo({
       
       {showText && (
         <span className={`${text} font-bold text-gray-900`}>
-          Budget Analyzer
+          Licitex
         </span>
       )}
     </div>

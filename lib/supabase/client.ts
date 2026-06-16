@@ -38,7 +38,7 @@ export function createClient() {
 
     const mockUser = { 
       id: 'local-admin-id', 
-      email: 'admin@saer.cl',
+      email: 'admin@licitex.cl',
       user_metadata: { full_name: 'Administrador Local' }
     };
 
@@ -51,21 +51,14 @@ export function createClient() {
     return {
       auth: {
         getSession: () => {
-          const token = getLocalToken();
-          if (token === 'local-admin-bypass-token') {
-            return Promise.resolve({ data: { session: mockSession }, error: null });
-          }
-          return Promise.resolve({ data: { session: null }, error: null });
+          // Dev Bypass ALWAYS returns the local mock admin
+          return Promise.resolve({ data: { session: mockSession }, error: null });
         },
         getUser: () => {
-          const token = getLocalToken();
-          if (token === 'local-admin-bypass-token') {
-            return Promise.resolve({ data: { user: mockUser }, error: null });
-          }
-          return Promise.resolve({ data: { user: null }, error: null });
+          return Promise.resolve({ data: { user: mockUser }, error: null });
         },
         signInWithPassword: ({ email }: { email: string }) => {
-          if (email === 'admin@saer.cl') {
+          if (email === 'admin@licitex.cl') {
             setLocalToken('local-admin-bypass-token');
             return Promise.resolve({ data: { user: mockUser, session: mockSession }, error: null });
           }
@@ -79,11 +72,8 @@ export function createClient() {
           return Promise.resolve({ data: { user: mockUser, session: mockSession }, error: null });
         },
         onAuthStateChange: (callback: any) => {
-          // Trigger once
-          const token = getLocalToken();
-          if (token === 'local-admin-bypass-token') {
-            callback('SIGNED_IN', mockSession);
-          }
+          // Trigger once automatically for local bypass
+          callback('SIGNED_IN', mockSession);
           return { data: { subscription: { unsubscribe: () => { } } } };
         },
         signOut: () => {

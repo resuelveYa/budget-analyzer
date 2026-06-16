@@ -3,47 +3,33 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 // Detect development mode
-const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true' || process.env.NODE_ENV === 'development'
+const isProduction = process.env.NODE_ENV === 'production'
 
-// Cookie config varies between dev and production
-const cookieConfig = isDevMode
-  ? { path: '/', sameSite: 'lax' as const, secure: false }
-  : { domain: '.licitex.cl', path: '/', sameSite: 'lax' as const, secure: true }
+const cookieConfig = isProduction
+  ? { domain: '.licitex.cl', path: '/', sameSite: 'lax' as const, secure: true }
+  : { path: '/', sameSite: 'lax' as const, secure: false }
 
 export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  const isBypass = !url || !anonKey || url === 'undefined' || isDevMode
+  const isBypass = process.env.NEXT_PUBLIC_DEV_BYPASS === 'true' || !isProduction || !url || !anonKey || url === 'undefined'
 
   if (isBypass) {
-    const cookieStore = await cookies()
-    const token = (await cookieStore).get('sb-local-token')?.value
-
-    const mockUser = { 
-      id: 'local-admin-id', 
-      email: 'admin@saer.cl',
-      user_metadata: { full_name: 'Administrador Local' }
+    const mockUser = {
+      id: 'dev-local',
+      email: 'dev@licitex.cl',
+      user_metadata: { full_name: 'Dev Local' }
     }
-
-    const mockSession = { 
+    const mockSession = {
       access_token: 'local-admin-bypass-token',
-      refresh_token: 'local-admin-bypass-refresh-token',
+      refresh_token: 'dev-bypass-refresh',
       user: mockUser
     }
-
-    const isAuthenticated = token === 'local-admin-bypass-token'
-
     return {
       auth: {
-        getUser: () => Promise.resolve({ 
-          data: { user: isAuthenticated ? mockUser : null }, 
-          error: null 
-        }),
-        getSession: () => Promise.resolve({ 
-          data: { session: isAuthenticated ? mockSession : null }, 
-          error: null 
-        }),
+        getUser: () => Promise.resolve({ data: { user: mockUser }, error: null }),
+        getSession: () => Promise.resolve({ data: { session: mockSession }, error: null }),
         signOut: () => Promise.resolve({ error: null }),
       },
       storage: { from: () => ({ upload: () => Promise.resolve({ data: {}, error: null }) }) }

@@ -13,8 +13,8 @@ import AnalysisContextPanel from '../AnalysisContextPanel';
 
 // Tipos de proyecto soportados
 const PROJECT_TYPES = [
-  { value: 'vial_mop', label: '🛣️ Obra vial MOP', description: 'Manual de Carreteras, puentes, conservación vial' },
   { value: 'municipal', label: '🏛️ Municipalidad', description: 'Bacheo, mobiliario urbano, mantención comunal' },
+  { value: 'vial_mop', label: '🛣️ Obra vial MOP', description: 'Manual de Carreteras, puentes, conservación vial' },
   { value: 'general', label: '📂 Proyecto General', description: 'Cualquier otro tipo de obra (análisis flexible)' },
 ] as const;
 
@@ -32,7 +32,7 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
   const [uploadProgress, setUploadProgress] = useState(0);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [projectType, setProjectType] = useState<ProjectType>('vial_mop');
+  const [projectType, setProjectType] = useState<ProjectType>('municipal');
   const [analysisContext, setAnalysisContext] = useState<AnalysisContext>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,7 +110,7 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
       const formData = new FormData();
       files.forEach(file => formData.append('files', file));
       formData.append('projectType', projectType);
-      
+
       if (analysisContext && Object.keys(analysisContext).length > 0) {
         formData.append('analysis_context', JSON.stringify(analysisContext));
       }
@@ -397,7 +397,6 @@ export default function PdfUploadZone({ onAnalysisComplete }: PdfUploadZoneProps
                   <Loader2 className="w-3 h-3 mr-2 animate-spin" />
                   PROCESANDO...
                 </span>
-                <span className="text-white/40">v2.1.0-haiku</span>
               </div>
               <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-hide flex flex-col-reverse">
                 {logs.length === 0 ? (

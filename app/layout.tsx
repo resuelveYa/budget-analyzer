@@ -6,7 +6,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Budget Analyzer - Análisis Inteligente de Presupuestos | saerTI',
+  title: 'Licitex - Análisis Inteligente de Presupuestos',
   description: 'Analiza presupuestos de construcción con IA en minutos.',
   icons: {
     icon: [

@@ -11,6 +11,8 @@ import type { PdfAnalysisConfig } from '@/types/budgetAnalysis';
 import type { PdfAnalysisResult } from '@/types/budgetAnalysis';
 
 export interface CompanyProfile {
+  razon_social?: string;
+  rut_empresa?: string;
   fortalezas: string;
   debilidades: string;
   ubicacion_oficinas: string;

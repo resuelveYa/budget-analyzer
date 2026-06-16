@@ -135,6 +135,7 @@ export interface AnalysisHistoryItem {
   summary?: string;
   file_name?: string;
   details?: any;
+  metadata?: any;
 }
 
 export interface HistoryResponse {

@@ -2,6 +2,16 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // Skip prefetch requests — Next.js prefetches every visible link, which would call
+  // getUser() hundreds of times/minute and trigger Supabase rate limiting on /token.
+  if (
+    request.headers.get('next-router-prefetch') ||
+    request.headers.get('purpose') === 'prefetch' ||
+    request.headers.get('x-middleware-prefetch')
+  ) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -17,17 +27,22 @@ export async function middleware(request: NextRequest) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const host = request.headers.get('host') || ''
-  const isLocalBypass = 
-    process.env.NEXT_PUBLIC_DEV_MODE === 'true' || 
-    host.includes('localhost') || 
-    host.includes('127.0.0.1') ||
-    !supabaseUrl || 
-    !supabaseAnonKey || 
+  const isLocalBypass =
+    process.env.NEXT_PUBLIC_DEV_BYPASS === 'true' ||
+    hostname.includes('localhost') ||
+    hostname.includes('192.168.') ||
+    !supabaseUrl ||
+    !supabaseAnonKey ||
     supabaseUrl === 'undefined';
 
   let user = null
-  if (!isLocalBypass) {
+  if (isLocalBypass) {
+    user = {
+      id: 'dev-local',
+      email: 'dev@licitex.cl',
+      user_metadata: { full_name: 'Dev Local' }
+    }
+  } else {
     const supabase = createServerClient(
       supabaseUrl!,
       supabaseAnonKey!,
@@ -73,19 +88,15 @@ export async function middleware(request: NextRequest) {
 
       if (error && error.message !== 'Auth session missing!') {
         console.error('Auth error in budget middleware:', error.message)
+        if (error.message.toLowerCase().includes('refresh token')) {
+          const cookiesToClear = request.cookies.getAll().filter(c => c.name.startsWith('sb-'))
+          cookiesToClear.forEach(cookie => {
+            supabaseResponse.cookies.set(cookie.name, '', { ...cookieConfig, maxAge: 0 })
+          })
+        }
       }
     } catch (err: any) {
       console.error('Unexpected auth error in budget middleware:', err?.message || err)
-    }
-  } else {
-    // Local dev bypass
-    const token = request.cookies.get('sb-local-token')?.value
-    if (token === 'local-admin-bypass-token') {
-      user = { 
-        id: 'local-admin-id', 
-        email: 'admin@saer.cl',
-        user_metadata: { full_name: 'Administrador Local' }
-      } as any;
     }
   }
 
@@ -123,6 +134,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api/backend|api/public|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Only run on routes that need session validation.
+    '/((?!_next/static|_next/image|favicon.ico|api/public|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

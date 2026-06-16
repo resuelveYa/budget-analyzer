@@ -2203,7 +2203,7 @@ export default function DynamicAnalysisView({ analysis: analysisProp }: { analys
                     <div key={idx} className="bg-slate-50 border border-slate-100 p-6 rounded-[2rem] hover:shadow-xl hover:shadow-red-50 hover:bg-white transition-all group">
                       <div className="flex justify-between items-start mb-4">
                         <h4 className="font-extrabold text-slate-900 group-hover:text-red-600 leading-tight">
-                          {riesgo.descripcion || riesgo.nombre || riesgo}
+                          {riesgo.descripcion || riesgo.descripción || riesgo.nombre || riesgo.factor || riesgo.riesgo || (typeof riesgo === 'string' ? riesgo : '')}
                         </h4>
                         <div className="flex gap-2">
                           {riesgo.impacto && (

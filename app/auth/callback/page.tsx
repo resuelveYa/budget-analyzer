@@ -49,7 +49,8 @@ export default function AuthCallbackPage() {
               return
             }
             console.log('[auth/callback] Session established successfully')
-            router.replace(next)
+            // Full reload so cookies are committed before the next server request
+            window.location.replace(next)
             return
           } catch (err) {
             console.error('[auth/callback] Unexpected error:', err)
